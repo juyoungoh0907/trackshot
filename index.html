@@ -78,17 +78,20 @@ select,input[type=number]{font:inherit;font-size:16px;color:var(--ink);backgroun
 .empty{font-size:13px;color:var(--muted);padding:9px 0}
 .pt-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .pt-actions button{font-size:14px;min-height:42px}
+.pt-actions .lift{grid-column:1/-1;border-style:dashed}
+.chip.lift{border-style:dashed}
+.chip.lift b{color:var(--green)}
 
 .speed{display:flex;align-items:baseline;gap:6px}
 .speed .v{font-family:var(--f-num);font-size:56px;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .speed .v.idle{color:var(--line)}
 .speed .u{font-size:15px;color:var(--muted)}
-.meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;border-top:1px solid var(--line);padding-top:10px}
+.meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;border-top:1px solid var(--line);padding-top:10px}
 .meta div{display:flex;flex-direction:column;gap:2px}
 .meta b{font-family:var(--f-num);font-weight:500;font-size:15px;font-variant-numeric:tabular-nums}
 .tag{font-size:11px;color:var(--green);background:var(--green-soft);border-radius:99px;padding:2px 8px;margin-left:6px}
 .warn{background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:9px 11px;font-size:13px}
-.seg{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.seg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
 .seg label{position:relative;cursor:pointer}
 .seg input{position:absolute;opacity:0;inset:0}
 .seg span{display:flex;align-items:center;justify-content:center;min-height:42px;border:1px solid var(--line);border-radius:10px;font-size:13px;color:var(--muted);text-align:center;line-height:1.2;padding:2px}
@@ -145,10 +148,11 @@ footer{font-size:12px;color:var(--muted);text-align:center;padding-top:6px}
         <p class="hint" id="now"></p>
         <div class="chips" id="chips"></div>
         <div class="pt-actions">
+          <button id="setLift" class="lift" disabled>이 프레임을 투구 시작(다리 들기)으로 지정</button>
           <button id="delHere" disabled>이 프레임 점 지우기</button>
           <button id="clear" disabled>점 모두 지우기</button>
         </div>
-        <p class="note">화면을 누른 채로 움직이면 확대경을 보며 점 위치를 맞출 수 있습니다. 같은 프레임을 다시 누르면 점이 옮겨집니다.</p>
+        <p class="note">화면을 누른 채로 움직이면 확대경을 보며 점 위치를 맞출 수 있습니다. 같은 프레임을 다시 누르면 점이 옮겨집니다. 다리를 들기 시작하는 프레임을 투구 시작으로 지정하면 릴리스까지 걸린 투구 시간이 계산되고 영상에도 표시됩니다(선택).</p>
       </div>
     </div>
 
@@ -158,6 +162,7 @@ footer{font-size:12px;color:var(--muted);text-align:center;padding-top:6px}
         <div class="speed"><span class="v" id="kmh">61.2</span><span class="u">km/h</span></div>
         <div class="meta">
           <div><span class="label">비행시간</span><b id="flight">0.529s</b></div>
+          <div><span class="label">투구 시간</span><b id="deliv">1.24s</b></div>
           <div><span class="label">프레임</span><b id="frames">127</b></div>
           <div><span class="label">오차</span><b id="err">±0.5</b></div>
         </div>
@@ -195,7 +200,7 @@ footer{font-size:12px;color:var(--muted);text-align:center;padding-top:6px}
       </details>
     </div>
   </div>
-  <footer>TrackShot · v1.5 (2026-10-31)</footer>
+  <footer>TrackShot · v1.6 (2026-10-31)</footer>
 </div>
 <!-- mp4-muxer 5.1.3 (MIT, Vanilagy) 내장 -->
 <script>
@@ -2074,11 +2079,11 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
 (function(){
 const $=s=>document.querySelector(s);
 const video=$('#video'), cv=$('#cv'), ctx=cv.getContext('2d'), stage=$('#stage'), vf=$('#vf');
-const TYPES=['패스트볼','커브','슬라이더','체인지업','기타'];
-const EN={'패스트볼':'Fastball','커브':'Curveball','슬라이더':'Slider','체인지업':'Changeup','기타':''};
+const TYPES=['패스트볼','투심','싱커','커터','슬라이더','스위퍼','커브','체인지업','스플리터','포크볼','너클볼','기타'];
+const EN={'패스트볼':'Fastball','투심':'Two-Seam','싱커':'Sinker','커터':'Cutter','슬라이더':'Slider','스위퍼':'Sweeper','커브':'Curveball','체인지업':'Changeup','스플리터':'Splitter','포크볼':'Forkball','너클볼':'Knuckleball','기타':''};
 const GREEN='#3ccf7a';
 const KEY='trackshot-v1';
-const S={points:[],fps:240,slow:1,dist:10,ext:1.0,hand:'R',exMode:'rt',hasVideo:false,ar:16/9,exporting:false};
+const S={liftT:null,points:[],fps:240,slow:1,dist:10,ext:1.0,hand:'R',exMode:'rt',hasVideo:false,ar:16/9,exporting:false};
 try{const raw=localStorage.getItem(KEY)||localStorage.getItem('pitch-tracer-v1'); if(raw){const d=JSON.parse(raw); Object.assign(S,{fps:d.fps||240,slow:d.slow||1,dist:d.dist||10,ext:(d.ext??1.0),hand:d.hand||'R',exMode:d.exMode||'rt'});}}catch(e){}
 function persist(){try{localStorage.setItem(KEY,JSON.stringify({fps:S.fps,slow:S.slow,dist:S.dist,ext:S.ext,hand:S.hand,exMode:S.exMode}))}catch(e){}}
 
@@ -2170,10 +2175,18 @@ function drawWatermark(c,W,H){
 /* ---------- 회전 3D 애니메이션 ---------- */
 // 투수 뒤에서 본 시점: x=오른쪽, y=위, z=타깃 방향. 우투 기준 팔 쪽 = +x.
 const SPIN={
-  '패스트볼':{fx:.35,fy:1,gz:0,rps:1.6},
-  '커브':{fx:-.45,fy:-1,gz:0,rps:1.3},
-  '슬라이더':{fx:-1,fy:-.15,gz:1.4,rps:1.8},
-  '체인지업':{fx:.75,fy:.5,gz:0,rps:.9}
+  // fx: 팔 쪽(+)/글러브 쪽(-), fy: 위(+)/아래(-), gz: 자이로 성분, rps: 화면 회전 속도, sr: 실밥 방향
+  '패스트볼':{fx:.35,fy:1,gz:0,rps:1.6,sr:0},
+  '투심':{fx:.8,fy:.65,gz:0,rps:1.5,sr:1.57},
+  '싱커':{fx:.9,fy:.3,gz:0,rps:1.4,sr:1.57},
+  '커터':{fx:-.45,fy:.85,gz:.55,rps:1.7,sr:0},
+  '슬라이더':{fx:-1,fy:-.15,gz:1.4,rps:1.8,sr:0},
+  '스위퍼':{fx:-1,fy:.1,gz:.35,rps:1.7,sr:0},
+  '커브':{fx:-.45,fy:-1,gz:0,rps:1.3,sr:0},
+  '체인지업':{fx:.75,fy:.5,gz:0,rps:.9,sr:1.57},
+  '스플리터':{fx:.45,fy:.3,gz:.35,rps:.55,sr:.8},
+  '포크볼':{fx:.2,fy:.15,gz:.5,rps:.3,sr:.8},
+  '너클볼':{fx:0,fy:1,gz:0,rps:.06,sr:.4,knuckle:true}
 };
 const SEAM=(()=>{const a=.7,b=.3,k=2*Math.sqrt(a*b),out=[];const N=220;
   const ax=.7,ay=.45,cx=Math.cos(ax),sx=Math.sin(ax),cy=Math.cos(ay),sy=Math.sin(ay);
@@ -2185,7 +2198,7 @@ function rot(v,k,cs,sn){const d=k[0]*v[0]+k[1]*v[1]+k[2]*v[2];
 function drawSpin(c,W,H,type,hand,time){
   const sp=SPIN[type]; if(!sp)return;
   const mir=hand==='L'?-1:1, fx=sp.fx*mir, fy=sp.fy, gz=sp.gz*mir;
-  let w=[-fy,fx,gz]; const wl=Math.hypot(...w); w=w.map(v=>v/wl);
+  let w=sp.knuckle?[Math.sin(time*.9),Math.cos(time*.6),.4*Math.sin(time*.4)]:[-fy,fx,gz]; const wl=Math.hypot(...w); w=w.map(v=>v/wl);
   const s=Math.min(W,H), R=s*0.07, m=s*0.035;
   const pw=R*4.2, ph=R*4.15, px=W-m-pw, py=H-m-ph, cx=px+pw/2, cy=py+R*1.8;
   c.save();
@@ -2196,7 +2209,8 @@ function drawSpin(c,W,H,type,hand,time){
   c.fillStyle=g; c.beginPath(); c.arc(cx,cy,R,0,Math.PI*2); c.fill();
   // 실밥
   const th=time*sp.rps*Math.PI*2, cs=Math.cos(th), sn=Math.sin(th);
-  const P=SEAM.map(p=>rot(p,w,cs,sn)), N=P.length;
+  const cr=Math.cos(sp.sr||0), sr=Math.sin(sp.sr||0);
+  const P=SEAM.map(p=>rot([p[0]*cr+p[2]*sr,p[1],-p[0]*sr+p[2]*cr],w,cs,sn)), N=P.length;
   c.lineCap='round';
   for(let i=0;i<N;i++){
     const p=P[i], q=P[(i+1)%N]; if(p[2]>0&&q[2]>0)continue;
@@ -2213,12 +2227,14 @@ function drawSpin(c,W,H,type,hand,time){
   // 회전축
   c.setLineDash([R*.12,R*.1]); c.strokeStyle='rgba(255,255,255,.75)'; c.lineWidth=R*.04;
   c.beginPath(); c.moveTo(cx-w[0]*R*1.4,cy+w[1]*R*1.4); c.lineTo(cx+w[0]*R*1.4,cy-w[1]*R*1.4); c.stroke(); c.setLineDash([]);
-  // 무브먼트 방향 화살표
+  // 무브먼트 방향 화살표 (너클볼은 방향이 정해지지 않아 생략)
+  if(!sp.knuckle){
   const ml=Math.hypot(fx,fy), dx=fx/ml, dy=-fy/ml;
   const x1=cx+dx*R*1.12, y1=cy+dy*R*1.12, x2=cx+dx*R*1.62, y2=cy+dy*R*1.62, hs=R*.2;
   c.strokeStyle=GREEN; c.fillStyle=GREEN; c.lineWidth=R*.07;
   c.beginPath(); c.moveTo(x1,y1); c.lineTo(x2-dx*hs*.6,y2-dy*hs*.6); c.stroke();
   c.beginPath(); c.moveTo(x2,y2); c.lineTo(x2-dx*hs-dy*hs*.7,y2-dy*hs+dx*hs*.7); c.lineTo(x2-dx*hs+dy*hs*.7,y2-dy*hs-dx*hs*.7); c.closePath(); c.fill();
+  }
   // 글자
   c.textAlign='center'; c.textBaseline='middle';
   c.fillStyle='#fff'; c.font=`700 ${R*.34}px "IBM Plex Sans KR",system-ui,sans-serif`;
@@ -2237,6 +2253,27 @@ function drawOverlays(c,W,H,t,paused,clock){
   }
   drawWatermark(c,W,H);
   drawSpin(c,W,H,curType(),S.hand,clock);
+  drawDelivery(c,W,H,t);
+}
+/* 투구 시간: 다리 들기 시작 → 릴리스. 재생 중엔 흐르고 릴리스에서 멈춤 */
+function deliveryTime(){const P=S.points; if(S.liftT==null||!P.length||S.liftT>=P[0].t)return null; return (P[0].t-S.liftT)/S.slow;}
+function drawDelivery(c,W,H,t){
+  const total=deliveryTime(); if(total==null||t<S.liftT-1e-6)return;
+  const P=S.points, done=t>=P[0].t-1e-6, val=done?total:(t-S.liftT)/S.slow;
+  const sc=Math.min(W,H)/500*1.6, F='"IBM Plex Sans KR",system-ui,sans-serif', m=Math.min(W,H)*0.035;
+  const sp=n=>{try{c.letterSpacing=n+'px';}catch(e){}};
+  c.save(); c.textBaseline='alphabetic';
+  const num=val.toFixed(2);
+  c.font=`600 ${22*sc}px ${F}`; sp(-.4*sc); const nw=c.measureText(num).width;
+  c.font=`500 ${10*sc}px ${F}`; sp(.4*sc); const uw=c.measureText('s').width;
+  c.font=`600 ${8.5*sc}px ${F}`; sp(1.6*sc); const lw=c.measureText('DELIVERY').width;
+  const px=11*sc, bw=Math.max(nw+3*sc+uw,lw)+px*2, bh=44*sc, bx=W-m-bw, by=m;
+  c.fillStyle='rgba(12,14,13,.68)'; rrect(c,bx,by,bw,bh,8*sc); c.fill();
+  c.strokeStyle='rgba(255,255,255,.12)'; c.lineWidth=1; rrect(c,bx+.5,by+.5,bw-1,bh-1,8*sc); c.stroke();
+  c.font=`600 ${8.5*sc}px ${F}`; sp(1.6*sc); c.fillStyle=GREEN; c.fillText('DELIVERY',bx+px,by+15*sc);
+  c.font=`600 ${22*sc}px ${F}`; sp(-.4*sc); c.fillStyle=done?'#fff':'rgba(255,255,255,.85)'; c.fillText(num,bx+px,by+bh-9*sc);
+  c.font=`500 ${10*sc}px ${F}`; sp(.4*sc); c.fillStyle='rgba(255,255,255,.62)'; c.fillText('s',bx+px+nw+3*sc,by+bh-10*sc);
+  c.restore();
 }
 function drawDemo(c,W,H){
   const T=(performance.now()/1000)%3;
@@ -2390,7 +2427,8 @@ async function exportVideoWC(){
     const mk=(fps,play,lead,tail,slow,rateOut)=>{const start=Math.max(0,t0-lead*S.slow), end=Math.min(dur,tN+tail*S.slow), step=rateOut/fps;
       return {fps,play,slow,start,end,step,count:Math.max(1,Math.floor((end-start)/step+1e-6)+1)};};
     // 실제 속도: 30fps 고정 출력, 파일 시간은 배속만큼 건너뜀
-    if(S.exMode!=='slow') segs.push(mk(30,S.slow>=4?2:1,1.2,0.3,false,S.slow));
+    const dl=deliveryTime(), leadRt=dl!=null?Math.max(1.2,dl+0.4):1.2;
+    if(S.exMode!=='slow') segs.push(mk(30,S.slow>=4?2:1,leadRt,0.3,false,S.slow));
     // 슬로모션: 30fps 출력
     if(S.exMode!=='rt'){const r=S.slow>=4?1:0.25; segs.push(mk(30,r,0.25,0.15,true,r));}
     const holdSec=i=>i===segs.length-1?1.5:0.7;
@@ -2592,19 +2630,23 @@ function updateReadout(){
 }
 function hereIdx(){const t=video.currentTime;return S.points.findIndex(p=>Math.abs(p.t-t)<step()/2);}
 function renderChips(){
-  const box=$('#chips'), n=S.points.length;
-  if(!S.hasVideo||n===0){box.innerHTML=`<span class="empty">${S.hasVideo?'아직 찍은 점이 없습니다.':'영상을 불러오면 여기에 점이 표시됩니다.'}</span>`;}
+  const box=$('#chips'), n=S.points.length, here=video.currentTime, onLift=S.liftT!=null&&Math.abs(S.liftT-here)<step()/2;
+  const liftChip=S.liftT!=null?`<span class="chip lift${onLift?' on':''}"><button data-go="lift" aria-label="투구 시작 프레임으로 이동"><b>투구 시작</b>F${frameNo(S.liftT)}</button><button class="x" data-del="lift" aria-label="투구 시작 지우기">×</button></span>`:'';
+  if(S.hasVideo&&n===0&&liftChip){box.innerHTML=liftChip;}
+  else if(!S.hasVideo||n===0){box.innerHTML=`<span class="empty">${S.hasVideo?'아직 찍은 점이 없습니다.':'영상을 불러오면 여기에 점이 표시됩니다.'}</span>`;}
   else{
     const h=hereIdx();
     box.innerHTML=S.points.map((p,i)=>{const name=i===0?'릴리스':(i===n-1&&n>1?'도착':`${i+1}`);
       return `<span class="chip${i===h?' on':''}"><button data-go="${i}" aria-label="${name} 프레임으로 이동"><b>${name}</b>F${frameNo(p.t)}</button><button class="x" data-del="${i}" aria-label="${name} 점 지우기">×</button></span>`;}).join('');
+    box.innerHTML=liftChip+box.innerHTML;
   }
-  $('#delHere').disabled=S.exporting||hereIdx()<0;
+  $('#delHere').disabled=S.exporting||(hereIdx()<0&&!onLift);
+  $('#setLift').disabled=S.exporting||!S.hasVideo;
 }
 $('#chips').addEventListener('click',e=>{
   const g=e.target.closest('[data-go]'), d=e.target.closest('[data-del]');
-  if(d){S.points.splice(+d.dataset.del,1);updateResult();return;}
-  if(g){video.pause();video.currentTime=S.points[+g.dataset.go].t;}
+  if(d){if(d.dataset.del==='lift')S.liftT=null;else S.points.splice(+d.dataset.del,1);updateResult();return;}
+  if(g){video.pause();video.currentTime=g.dataset.go==='lift'?S.liftT:S.points[+g.dataset.go].t;}
 });
 const NOW=['공이 손을 떠나는 프레임에서 공을 누르세요.','프레임을 넘기며 공 위치를 3~6번 더 누르세요.','공이 타깃에 닿는 프레임에서 마지막으로 누르세요.','재생해서 궤적을 확인하고 영상을 저장하세요.'];
 function updateResult(){
@@ -2614,17 +2656,19 @@ function updateResult(){
   const k=$('#kmh');
   if(!S.hasVideo){
     $('#tag').hidden=false; k.classList.remove('idle'); k.textContent='61.2';
-    $('#flight').textContent='0.529s';$('#frames').textContent='127';$('#err').textContent='±0.5';
+    $('#flight').textContent='0.529s';$('#frames').textContent='127';$('#err').textContent='±0.5';$('#deliv').textContent='1.24s';
     $('#export').disabled=true; w.hidden=true;
   }else if(!info){
     $('#tag').hidden=true; k.classList.add('idle'); k.textContent='00.0';
-    $('#flight').textContent='–';$('#frames').textContent='–';$('#err').textContent='–';
+    $('#flight').textContent='–';$('#frames').textContent='–';$('#err').textContent='–';$('#deliv').textContent='–';
     $('#export').disabled=true; w.hidden=true;
   }else{
     $('#tag').hidden=true; k.classList.remove('idle'); k.textContent=info.v.toFixed(1);
     $('#flight').textContent=info.dt.toFixed(3)+'s';$('#frames').textContent=info.frames;$('#err').textContent='±'+info.err.toFixed(1);
+    const dl=deliveryTime(); $('#deliv').textContent=dl!=null?dl.toFixed(2)+'s':'–';
     $('#export').disabled=S.exporting;
     if(info.v<20||info.v>170){w.hidden=false;w.textContent=`${info.v.toFixed(0)} km/h는 일반 범위를 벗어납니다. 측정 설정의 '영상 파일 형식'을 확인하세요.`;}
+    else if(S.liftT!=null&&S.liftT>=S.points[0].t){w.hidden=false;w.textContent='투구 시작은 릴리스(첫 점)보다 앞 프레임이어야 합니다.';}
     else if(n===2){w.hidden=false;w.textContent='중간 점을 2~4개 더 찍으면 휘는 궤적이 나옵니다.';}
     else w.hidden=true;
   }
@@ -2636,7 +2680,7 @@ function updateResult(){
 /* ---------- 영상 불러오기·재생 ---------- */
 $('#file').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;$('#vidErr').hidden=true;$('#result').hidden=true;status('');video.src=URL.createObjectURL(f);video.load();});
 video.addEventListener('loadedmetadata',()=>{
-  S.hasVideo=true; S.points=[]; S.ar=(video.videoWidth&&video.videoHeight)?video.videoWidth/video.videoHeight:16/9;
+  S.hasVideo=true; S.points=[]; S.liftT=null; S.ar=(video.videoWidth&&video.videoHeight)?video.videoWidth/video.videoHeight:16/9;
   ['#play','#b10','#b1','#f1','#f10','#scrub'].forEach(s=>$(s).disabled=false);
   video.playbackRate=+$('#rate').value; video.currentTime=0;
   layout(); updateReadout(); updateResult();
@@ -2689,9 +2733,10 @@ cv.addEventListener('pointermove',e=>{
 });
 const endDrag=()=>{if(dragT===null)return;dragT=null;loupe=null;updateResult();};
 cv.addEventListener('pointerup',endDrag); cv.addEventListener('pointercancel',endDrag);
-$('#delHere').onclick=()=>{const i=hereIdx();if(i>=0){S.points.splice(i,1);updateResult();}};
+$('#delHere').onclick=()=>{const i=hereIdx();if(i>=0)S.points.splice(i,1);else if(S.liftT!=null&&Math.abs(S.liftT-video.currentTime)<step()/2)S.liftT=null;updateResult();};
+$('#setLift').onclick=()=>{if(!S.hasVideo||S.exporting)return;video.pause();S.liftT=video.currentTime;updateResult();};
 $('#clear').onclick=()=>{const b=$('#clear');
-  if(b.dataset.armed){delete b.dataset.armed;b.textContent='점 모두 지우기';S.points=[];updateResult();}
+  if(b.dataset.armed){delete b.dataset.armed;b.textContent='점 모두 지우기';S.points=[];S.liftT=null;updateResult();}
   else{b.dataset.armed='1';b.textContent='한 번 더 누르면 삭제';setTimeout(()=>{if(b.dataset.armed){delete b.dataset.armed;b.textContent='점 모두 지우기';}},3000);}
 };
 
