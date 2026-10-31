@@ -122,6 +122,16 @@ input[type=text]{font:inherit;font-size:16px;color:var(--ink);background:var(--s
 .pt-actions button.on{background:var(--green);border-color:var(--green);color:#fff;font-weight:600}
 .judge{margin-left:auto;align-self:center;font-size:13px;font-weight:700;letter-spacing:.08em;padding:5px 10px;border-radius:999px;color:#fff}
 .judge.s{background:#e5484d}.judge.b{background:#2f7fd8}
+.zpad{display:flex;flex-direction:column;gap:10px}
+.zgrid{display:grid;grid-template-columns:44px repeat(4,minmax(0,1fr));gap:6px;align-items:center}
+.zgrid button{font-size:15px;min-height:44px;padding:4px}
+.zgrid .zl{font-size:12px;color:var(--muted)}
+.zgrid .w2{grid-column:span 2;gap:6px}
+.zgrid .zl{line-height:1.25}
+.zi{width:26px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linejoin:round}
+.zone-head .primary{min-height:38px;padding:4px 16px}
+.zratio{display:grid;grid-template-columns:110px 1fr;gap:8px;align-items:end}
+.zratio button{font-size:14px}
 footer{font-size:12px;color:var(--muted);text-align:center;padding-top:6px}
 </style>
 </head>
@@ -155,6 +165,30 @@ footer{font-size:12px;color:var(--muted);text-align:center;padding-top:6px}
         </select>
       </div>
       <div class="warn" id="vidErr" hidden></div>
+        <div class="card zpad" id="zpad" hidden>
+        <div class="zone-head"><b>스트라이크존 맞추기</b><button id="zoneDone" class="primary">완료</button></div>
+        <p class="hint"><b>1</b>영상 위에서 존의 한쪽 모서리부터 반대쪽 모서리까지 손가락으로 쓱 그으세요.</p>
+        <p class="hint"><b>2</b>아래 버튼으로 미세 조정하세요. 길게 누르면 계속 움직입니다.</p>
+        <div class="zgrid">
+          <span class="zl">위치</span>
+          <button data-z="mx,-1" aria-label="존 왼쪽으로">←</button><button data-z="my,-1" aria-label="존 위로">↑</button><button data-z="my,1" aria-label="존 아래로">↓</button><button data-z="mx,1" aria-label="존 오른쪽으로">→</button>
+          <span class="zl">가로</span>
+          <button class="w2" data-z="sx,-1" aria-label="존 가로 좁게">좁게</button><button class="w2" data-z="sx,1" aria-label="존 가로 넓게">넓게</button>
+          <span class="zl">세로</span>
+          <button class="w2" data-z="sy,-1" aria-label="존 세로 낮게">낮게</button><button class="w2" data-z="sy,1" aria-label="존 세로 높게">높게</button>
+          <span class="zl">좌우<br>기울기</span>
+          <button class="w2" data-z="tx,1" aria-label="왼쪽 변을 길게"><svg class="zi" viewBox="0 0 40 28" aria-hidden="true"><path d="M6 3 L34 9 L34 19 L6 25 Z"/></svg>왼쪽 크게</button><button class="w2" data-z="tx,-1" aria-label="오른쪽 변을 길게"><svg class="zi" viewBox="0 0 40 28" aria-hidden="true"><path d="M6 9 L34 3 L34 25 L6 19 Z"/></svg>오른쪽 크게</button>
+          <span class="zl">위아래<br>기울기</span>
+          <button class="w2" data-z="ty,1" aria-label="윗변을 넓게"><svg class="zi" viewBox="0 0 40 28" aria-hidden="true"><path d="M4 4 L36 4 L28 24 L12 24 Z"/></svg>위 넓게</button><button class="w2" data-z="ty,-1" aria-label="아랫변을 넓게"><svg class="zi" viewBox="0 0 40 28" aria-hidden="true"><path d="M12 4 L28 4 L36 24 L4 24 Z"/></svg>아래 넓게</button>
+          <span class="zl">회전</span>
+          <button class="w2" data-z="rot,-1" aria-label="존 왼쪽으로 회전">↺ 왼쪽</button><button class="w2" data-z="rot,1" aria-label="존 오른쪽으로 회전">↻ 오른쪽</button>
+        </div>
+        <div class="zratio">
+          <label class="f">타자 키 (cm)<input type="number" inputmode="numeric" id="bh" min="120" max="210" step="1" value="175"></label>
+          <button id="zoneRatio">규정 비율로 세로 맞추기</button>
+        </div>
+        <p class="note">규정 비율: 가로 47.2cm(홈플레이트+양옆 2cm), 세로는 타자 키의 27.04~55.75% (KBO ABS 기준). 타깃이 카메라를 정면으로 마주 볼 때 정확합니다.</p>
+      </div>
 
       <div class="card">
         <p class="hint" id="now"></p>
@@ -173,7 +207,7 @@ footer{font-size:12px;color:var(--muted);text-align:center;padding-top:6px}
           <button id="zoneEdit" disabled>존 위치 맞추기</button>
           <button id="zoneReset" disabled>존 처음 위치로</button>
         </div>
-        <p class="note" id="zoneNote">'존 위치 맞추기'를 누르고 네 모서리를 끌어 타깃(존 표시)에 맞추세요. 안쪽을 끌면 통째로 움직입니다. 카메라를 같은 자리에 두면 다음 영상에도 그대로 쓸 수 있습니다.</p>
+        <p class="note" id="zoneNote">'존 위치 맞추기'를 누른 뒤 영상 위에 손가락으로 존을 그리면 됩니다. 카메라를 같은 자리에 두면 다음 영상에도 그대로 쓸 수 있습니다.</p>
       </div>
     </div>
 
@@ -235,7 +269,7 @@ footer{font-size:12px;color:var(--muted);text-align:center;padding-top:6px}
       </details>
     </div>
   </div>
-  <footer>TrackShot · v2.0 (2026-10-31)</footer>
+  <footer>TrackShot · v2.2 (2026-11-01)</footer>
 </div>
 <!-- mp4-muxer 5.1.3 (MIT, Vanilagy) 내장 -->
 <script>
@@ -2123,13 +2157,13 @@ const MPH=0.621371;
 const spd=v=>S.unit==='mph'?v*MPH:v, unitTxt=()=>S.unit==='mph'?'mph':'km/h';
 const KEY='trackshot-v1';
 const S={liftT:null,points:[],fps:240,slow:1,dist:10,ext:1.0,hand:'R',exMode:'rt',hasVideo:false,ar:16/9,exporting:false};
-try{const raw=localStorage.getItem(KEY)||localStorage.getItem('pitch-tracer-v1'); if(raw){const d=JSON.parse(raw); Object.assign(S,{fps:d.fps||240,slow:d.slow||1,dist:d.dist||10,ext:(d.ext??1.0),hand:d.hand||'R',exMode:d.exMode||'rt',unit:d.unit||'kmh',color:d.color||GREEN,pname:d.pname||'',showSpin:d.showSpin!==false,showRel:d.showRel!==false,showDate:d.showDate!==false,trail:d.trail||'keep',zone:d.zone||null,zoneOn:!!d.zoneOn});}}catch(e){}
-function persist(){try{localStorage.setItem(KEY,JSON.stringify({fps:S.fps,slow:S.slow,dist:S.dist,ext:S.ext,hand:S.hand,exMode:S.exMode,unit:S.unit,color:S.color,pname:S.pname,showSpin:S.showSpin,showRel:S.showRel,showDate:S.showDate,trail:S.trail,zone:S.zone,zoneOn:S.zoneOn}))}catch(e){}}
+try{const raw=localStorage.getItem(KEY)||localStorage.getItem('pitch-tracer-v1'); if(raw){const d=JSON.parse(raw); Object.assign(S,{fps:d.fps||240,slow:d.slow||1,dist:d.dist||10,ext:(d.ext??1.0),hand:d.hand||'R',exMode:d.exMode||'rt',unit:d.unit||'kmh',color:d.color||GREEN,pname:d.pname||'',showSpin:d.showSpin!==false,showRel:d.showRel!==false,showDate:d.showDate!==false,trail:d.trail||'keep',bh:d.bh||175,zone:d.zone||null,zoneOn:!!d.zoneOn});}}catch(e){}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify({fps:S.fps,slow:S.slow,dist:S.dist,ext:S.ext,hand:S.hand,exMode:S.exMode,unit:S.unit,color:S.color,pname:S.pname,showSpin:S.showSpin,showRel:S.showRel,showDate:S.showDate,trail:S.trail,bh:S.bh,zone:S.zone,zoneOn:S.zoneOn}))}catch(e){}}
 
 $('#types').innerHTML=TYPES.map((n,i)=>`<label><input type="radio" name="ptype" id="pt${i}" value="${n}" ${i===0?'checked':''}><span>${n}</span></label>`).join('');
 const curType=()=>document.querySelector('input[name=ptype]:checked').value;
 $('#fps').value=String(S.fps); $('#slow').value=String(S.slow); $('#dist').value=S.dist; $('#ext').value=S.ext; $('#hand').value=S.hand; $('#exMode').value=S.exMode;
-$('#unit').value=S.unit||'kmh'; $('#pname').value=S.pname||''; $('#showSpin').checked=S.showSpin!==false; $('#showRel').checked=S.showRel!==false; $('#showDate').checked=S.showDate!==false; $('#trail').value=S.trail||'keep'; $('#zoneOn').checked=!!S.zoneOn;
+$('#unit').value=S.unit||'kmh'; $('#pname').value=S.pname||''; $('#showSpin').checked=S.showSpin!==false; $('#showRel').checked=S.showRel!==false; $('#showDate').checked=S.showDate!==false; $('#trail').value=S.trail||'keep'; $('#bh').value=S.bh||175; $('#zoneOn').checked=!!S.zoneOn;
 $('#swatches').innerHTML=TRAIL.map(([n,c])=>`<button type="button" data-c="${c}" aria-label="궤적 ${n}" aria-pressed="${c===TC()}" style="background:${c}"></button>`).join('');
 
 const step=()=>S.slow/S.fps;
@@ -2783,6 +2817,7 @@ function updateResult(){
   const jg=S.hasVideo?judge():null, jb=$('#judge'); jb.hidden=!jg; if(jg){jb.textContent=jg==='S'?'STRIKE':'BALL'; jb.className='judge '+(jg==='S'?'s':'b');}
   $('#zoneEdit').disabled=$('#zoneReset').disabled=!S.hasVideo||S.exporting;
   $('#zoneEdit').textContent=S.zoneEdit?'존 맞추기 완료':'존 위치 맞추기'; $('#zoneEdit').classList.toggle('on',!!S.zoneEdit);
+  $('#zpad').hidden=!S.zoneEdit; $('#zoneNote').hidden=!!S.zoneEdit;
   const s=n===0?0:n===1?1:n===2?2:3;
   $('#now').innerHTML=S.hasVideo?`<b>${Math.min(s+1,4)}/4</b>${NOW[s]}`:'<b>시작</b>240fps 슬로모션 영상을 불러오세요.';
   renderChips();
@@ -2836,8 +2871,10 @@ cv.addEventListener('pointerdown',e=>{
     e.preventDefault(); try{cv.setPointerCapture(e.pointerId);}catch(_){}
     const r=cv.getBoundingClientRect(), q=posOf(e);
     let bi=-1,bd=1e9; S.zone.forEach((p,i)=>{const d=Math.hypot((p.x-q.x)*r.width,(p.y-q.y)*r.height); if(d<bd){bd=d;bi=i;}});
-    if(bd<34){zDrag={i:bi}; loupe={x:S.zone[bi].x,y:S.zone[bi].y};}
-    else zDrag={move:true,last:q,start:S.zone.map(p=>({...p}))};
+    const P=S.zone; let inside=false; for(let i=0,j=3;i<4;j=i++){const a=P[i],b=P[j]; if(((a.y>q.y)!==(b.y>q.y))&&(q.x<(b.x-a.x)*(q.y-a.y)/(b.y-a.y)+a.x))inside=!inside;}
+    if(bd<26){zDrag={i:bi}; loupe={x:S.zone[bi].x,y:S.zone[bi].y};}
+    else if(inside) zDrag={move:true,last:q};
+    else {zDrag={draw:true,start:q}; loupe={x:q.x,y:q.y};}
     return;
   }
   if(!video.paused){video.pause();return;}
@@ -2849,7 +2886,9 @@ cv.addEventListener('pointerdown',e=>{
 });
 cv.addEventListener('pointermove',e=>{
   if(zDrag){e.preventDefault(); const q=posOf(e);
-    if(zDrag.move){const dx=q.x-zDrag.last.x, dy=q.y-zDrag.last.y; zDrag.last=q; S.zone=S.zone.map(p=>({x:Math.min(1,Math.max(0,p.x+dx)),y:Math.min(1,Math.max(0,p.y+dy))}));}
+    if(zDrag.draw){const a=zDrag.start, x1=Math.min(a.x,q.x), x2=Math.max(a.x,q.x), y1=Math.min(a.y,q.y), y2=Math.max(a.y,q.y);
+      if(x2-x1>0.01&&y2-y1>0.01)S.zone=[{x:x1,y:y1},{x:x2,y:y1},{x:x2,y:y2},{x:x1,y:y2}]; loupe={x:q.x,y:q.y};}
+    else if(zDrag.move){const dx=q.x-zDrag.last.x, dy=q.y-zDrag.last.y; zDrag.last=q; S.zone=S.zone.map(p=>({x:Math.min(1,Math.max(0,p.x+dx)),y:Math.min(1,Math.max(0,p.y+dy))}));}
     else{S.zone[zDrag.i]={x:q.x,y:q.y}; loupe={x:q.x,y:q.y};}
     return;}
   if(dragT===null)return; e.preventDefault();
@@ -2878,7 +2917,39 @@ $('#pname').addEventListener('input',()=>{S.pname=$('#pname').value;persist();})
 
 $('#trail').addEventListener('change',()=>{S.trail=$('#trail').value;persist();});
 $('#zoneOn').addEventListener('change',()=>{S.zoneOn=$('#zoneOn').checked; if(S.zoneOn&&!S.zone)S.zone=ZDEF.map(p=>({...p})); if(!S.zoneOn)S.zoneEdit=false; persist(); updateResult();});
-$('#zoneEdit').onclick=()=>{ if(!S.hasVideo)return; S.zoneEdit=!S.zoneEdit; if(S.zoneEdit){video.pause(); S.zoneOn=true; $('#zoneOn').checked=true; if(!S.zone)S.zone=ZDEF.map(p=>({...p}));} persist(); updateResult(); };
+$('#zoneEdit').onclick=()=>{ if(!S.hasVideo)return; S.zoneEdit=!S.zoneEdit; if(S.zoneEdit){video.pause(); S.zoneOn=true; $('#zoneOn').checked=true; if(!S.zone)S.zone=ZDEF.map(p=>({...p}));} persist(); updateResult(); if(S.zoneEdit)$('#vf').scrollIntoView({block:'start',behavior:'smooth'}); };
+function zoneAdj(kind,dir){
+  if(!S.zone)return; const z=S.zone, cx=(z[0].x+z[1].x+z[2].x+z[3].x)/4, cy=(z[0].y+z[1].y+z[2].y+z[3].y)/4, st=0.004;
+  if(kind==='mx')S.zone=z.map(p=>({x:p.x+dir*st,y:p.y}));
+  else if(kind==='my')S.zone=z.map(p=>({x:p.x,y:p.y+dir*st}));
+  else if(kind==='sx'){const f=1+dir*0.02; S.zone=z.map(p=>({x:cx+(p.x-cx)*f,y:p.y}));}
+  else if(kind==='sy'){const f=1+dir*0.02; S.zone=z.map(p=>({x:p.x,y:cy+(p.y-cy)*f}));}
+  else if(kind==='tx'||kind==='ty'){ // 기울기: 마주 보는 두 변의 길이를 반대로 조절
+    const f=0.015*dir, edge=(a,b,g)=>{const my=(a.y+b.y)/2, mx=(a.x+b.x)/2; return [{x:mx+(a.x-mx)*(1+g),y:my+(a.y-my)*(1+g)},{x:mx+(b.x-mx)*(1+g),y:my+(b.y-my)*(1+g)}];};
+    if(kind==='tx'){const [l0,l3]=edge(z[0],z[3],f), [r1,r2]=edge(z[1],z[2],-f); S.zone=[l0,r1,r2,l3];}
+    else{const [t0,t1]=edge(z[0],z[1],f), [b3,b2]=edge(z[3],z[2],-f); S.zone=[t0,t1,b2,b3];}}
+  else if(kind==='rot'){ // 화면 비율을 고려해 실제 각도로 회전
+    const ar=S.ar||1, a=dir*0.5*Math.PI/180, cs=Math.cos(a), sn=Math.sin(a);
+    S.zone=z.map(p=>{const dx=(p.x-cx)*ar, dy=p.y-cy; return {x:cx+(dx*cs-dy*sn)/ar, y:cy+dx*sn+dy*cs};});}
+  S.zone=S.zone.map(p=>({x:Math.min(1,Math.max(0,p.x)),y:Math.min(1,Math.max(0,p.y))}));
+}
+document.querySelectorAll('#zpad [data-z]').forEach(b=>{
+  const [k,d]=b.dataset.z.split(','), go=()=>zoneAdj(k,+d); let t1=null,t2=null; const stop=()=>{clearTimeout(t1);clearInterval(t2);if(t1||t2){persist();updateResult();}t1=t2=null;};
+  b.addEventListener('pointerdown',e=>{e.preventDefault();go();t1=setTimeout(()=>{t2=setInterval(go,60);},350);});
+  ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,stop));
+  b.addEventListener('click',e=>{if(e.detail===0){go();persist();updateResult();}});
+  b.addEventListener('contextmenu',e=>e.preventDefault());
+});
+$('#bh').addEventListener('input',()=>{const v=parseFloat($('#bh').value);if(v>0){S.bh=v;persist();}});
+$('#zoneRatio').onclick=()=>{
+  if(!S.zone)return; const z=S.zone, ar=S.ar||1, bh=S.bh||175;
+  const ratio=(bh*(0.5575-0.2704))/47.18; // 세로/가로 (실제 cm 비율)
+  const wTop=Math.hypot((z[1].x-z[0].x)*ar,z[1].y-z[0].y), wBot=Math.hypot((z[2].x-z[3].x)*ar,z[2].y-z[3].y), w=(wTop+wBot)/2;
+  const cy=(z[0].y+z[1].y+z[2].y+z[3].y)/4, h=w*ratio;
+  S.zone=[{x:z[0].x,y:cy-h/2},{x:z[1].x,y:cy-h/2},{x:z[2].x,y:cy+h/2},{x:z[3].x,y:cy+h/2}];
+  persist(); updateResult();
+};
+$('#zoneDone').onclick=()=>{S.zoneEdit=false;persist();updateResult();$('#zoneEdit').scrollIntoView({block:'nearest',behavior:'smooth'});};
 $('#zoneReset').onclick=()=>{ S.zone=ZDEF.map(p=>({...p})); S.zoneOn=true; $('#zoneOn').checked=true; persist(); updateResult(); };
 $('#swatches').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)return;S.color=b.dataset.c;persist();document.querySelectorAll('#swatches button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));});
 
