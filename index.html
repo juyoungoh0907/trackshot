@@ -191,7 +191,7 @@ footer{font-size:12px;color:var(--muted);text-align:center;padding-top:6px}
         <div class="fields">
           <label class="f">투구 거리 (m)<input type="number" inputmode="decimal" id="dist" step="0.1" min="1" max="25" value="10"></label>
           <label class="f">릴리스 앞당김 (m)<input type="number" inputmode="decimal" id="ext" step="0.1" min="0" max="2.5" value="1.0"></label>
-          <label class="f">촬영 fps<select id="fps"><option>240</option><option>120</option><option>60</option></select></label>
+          <label class="f">촬영 fps<select id="fps"><option>240</option><option>120</option><option>60</option><option>30</option></select></label>
           <label class="f">영상 파일 형식<select id="slow"><option value="1">원본 고속 파일</option><option value="8">8배 느리게 저장됨</option><option value="4">4배 느리게 저장됨</option></select></label>
           <label class="f">투구 손<select id="hand"><option value="R">우투</option><option value="L">좌투</option></select></label>
         </div>
@@ -200,7 +200,7 @@ footer{font-size:12px;color:var(--muted);text-align:center;padding-top:6px}
       </details>
     </div>
   </div>
-  <footer>TrackShot · v1.6 (2026-10-31)</footer>
+  <footer>TrackShot · v1.7 (2026-10-31)</footer>
 </div>
 <!-- mp4-muxer 5.1.3 (MIT, Vanilagy) 내장 -->
 <script>
@@ -2266,11 +2266,11 @@ function drawDelivery(c,W,H,t){
   const num=val.toFixed(2);
   c.font=`600 ${22*sc}px ${F}`; sp(-.4*sc); const nw=c.measureText(num).width;
   c.font=`500 ${10*sc}px ${F}`; sp(.4*sc); const uw=c.measureText('s').width;
-  c.font=`600 ${8.5*sc}px ${F}`; sp(1.6*sc); const lw=c.measureText('DELIVERY').width;
+  c.font=`600 ${8.5*sc}px ${F}`; sp(1.6*sc); const lw=c.measureText('RELEASE').width;
   const px=11*sc, bw=Math.max(nw+3*sc+uw,lw)+px*2, bh=44*sc, bx=W-m-bw, by=m;
   c.fillStyle='rgba(12,14,13,.68)'; rrect(c,bx,by,bw,bh,8*sc); c.fill();
   c.strokeStyle='rgba(255,255,255,.12)'; c.lineWidth=1; rrect(c,bx+.5,by+.5,bw-1,bh-1,8*sc); c.stroke();
-  c.font=`600 ${8.5*sc}px ${F}`; sp(1.6*sc); c.fillStyle=GREEN; c.fillText('DELIVERY',bx+px,by+15*sc);
+  c.font=`600 ${8.5*sc}px ${F}`; sp(1.6*sc); c.fillStyle=GREEN; c.fillText('RELEASE',bx+px,by+15*sc);
   c.font=`600 ${22*sc}px ${F}`; sp(-.4*sc); c.fillStyle=done?'#fff':'rgba(255,255,255,.85)'; c.fillText(num,bx+px,by+bh-9*sc);
   c.font=`500 ${10*sc}px ${F}`; sp(.4*sc); c.fillStyle='rgba(255,255,255,.62)'; c.fillText('s',bx+px+nw+3*sc,by+bh-10*sc);
   c.restore();
