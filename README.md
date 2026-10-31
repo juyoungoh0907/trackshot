@@ -7,7 +7,7 @@
 | 파일 | 역할 |
 |---|---|
 | `index.html` | 앱 전체 (화면, 측정, 영상 저장) |
-| `vendor/mp4-muxer.js` | mp4 파일 생성 라이브러리 (MIT, `vendor/mp4-muxer-LICENSE`) |
+| `licenses/mp4-muxer-LICENSE` | index.html에 내장된 mp4 생성 라이브러리(mp4-muxer, MIT) 라이선스 |
 | `manifest.webmanifest`, `icon.svg`, `icon-*.png`, `apple-touch-icon.png` | 홈 화면 추가용 아이콘 |
 
 ## Vercel 배포
