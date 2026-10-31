@@ -410,7 +410,7 @@ async function exportVideo(){
   S.exporting=true; setBusy(true); $('#result').hidden=true;
   const long=1920, vw=video.videoWidth||1280, vh=video.videoHeight||720, k=Math.min(1,long/Math.max(vw,vh));
   oc.width=Math.round(vw*k/2)*2; oc.height=Math.round(vh*k/2)*2;
-  const oc2=oc.getContext('2d');
+  const oc2=oc.getContext('2d'); oc2.imageSmoothingQuality='high';
   const t0=P[0].t, tN=P[P.length-1].t, dur=video.duration||tN;
   // 구간: 실제 속도(파일 배속만큼 빠르게 재생) / 슬로모션
   const seg=(rate,leadReal,tailReal,slow)=>({rate,slow,start:Math.max(0,t0-leadReal*S.slow),end:Math.min(dur,tN+tailReal*S.slow)});
@@ -421,7 +421,7 @@ async function exportVideo(){
   const total=segs.reduce((s,g,i)=>s+(g.end-g.start)/g.rate+holdOf(i)/1000,0);
   video.pause();
   const stream=oc.captureStream(30);
-  let rec; try{rec=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:8e6}:{videoBitsPerSecond:8e6});}catch(e){rec=new MediaRecorder(stream);}
+  let rec; try{rec=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:16e6}:{videoBitsPerSecond:16e6});}catch(e){rec=new MediaRecorder(stream);}
   const chunks=[]; rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
   const done=new Promise(r=>rec.onstop=r);
   // vt = 저장 영상 안의 시간(회전 애니메이션 시계)
@@ -485,7 +485,10 @@ async function exportVideo(){
   video.playbackRate=+$('#rate').value;
   S.exporting=false; setBusy(false);
   const type=(rec.mimeType||mime||'video/webm'), ext=type.includes('mp4')?'mp4':'webm';
-  await deliver(new Blob(chunks,{type}),ext,info);
+  let out=new Blob(chunks,{type});
+  if(ext==='mp4'){try{const fx=await remuxFragmented(out); if(fx)out=fx;}catch(e){}}
+  S.engine='호환 모드';
+  await deliver(out,ext,info);
 }
 
 /* WebCodecs: 프레임마다 정확한 시간을 지정해 인코딩. 휴대폰 성능과 무관하게 끊김 없음 */
@@ -503,11 +506,12 @@ async function exportVideoWC(){
       if(codec)break;
     }
     if(!codec)throw new Error('codec');
-    const oc=document.createElement('canvas'); oc.width=W; oc.height=H; const c2=oc.getContext('2d');
+    const oc=document.createElement('canvas'); oc.width=W; oc.height=H; const c2=oc.getContext('2d'); c2.imageSmoothingQuality='high';
     const muxer=new Mp4Muxer.Muxer({target:new Mp4Muxer.ArrayBufferTarget(),video:{codec:'avc',width:W,height:H,frameRate:30},fastStart:'in-memory'});
     let encErr=null;
     const enc=new VideoEncoder({output:(ch,meta)=>muxer.addVideoChunk(ch,meta),error:e=>{encErr=e;}});
-    enc.configure({codec,width:W,height:H,bitrate:8e6,framerate:30});
+    const br=Math.round(Math.min(20e6,Math.max(6e6,W*H*30*0.26)));
+    enc.configure({codec,width:W,height:H,bitrate:br,framerate:30,latencyMode:'quality'});
 
     const t0=P[0].t, tN=P[P.length-1].t, dur=video.duration||tN, tHold=tN+1e-3+(tN-t0);
     const segs=[];
@@ -561,12 +565,75 @@ async function exportVideoWC(){
     await enc.flush(); enc.close(); muxer.finalize();
     video.playbackRate=+$('#rate').value;
     S.exporting=false; setBusy(false);
+    S.engine='고화질 모드';
     await deliver(new Blob([muxer.target.buffer],{type:'video/mp4'}),'mp4',info);
   }catch(e){
     video.pause(); video.playbackRate=+$('#rate').value;
     S.exporting=false; setBusy(false);
     throw e;
   }
+}
+/* 조각난(fragmented) mp4를 일반 mp4로 다시 묶기: 휴대폰·인스타가 길이를 정확히 읽도록 */
+async function remuxFragmented(blob){
+  const buf=new Uint8Array(await blob.arrayBuffer()), dv=new DataView(buf.buffer,buf.byteOffset,buf.byteLength);
+  const boxes=(s,e)=>{const out=[];let o=s;while(o+8<=e){let sz=dv.getUint32(o),h=8;const ty=String.fromCharCode(buf[o+4],buf[o+5],buf[o+6],buf[o+7]);
+    if(sz===1){sz=Number(dv.getBigUint64(o+8));h=16;}else if(sz===0)sz=e-o; if(sz<h||o+sz>e)break; out.push({ty,o,s:o+h,e:o+sz}); o+=sz;} return out;};
+  const find=(a,t)=>a.find(b=>b.ty===t);
+  const top=boxes(0,buf.length), moov=find(top,'moov');
+  if(!moov||!top.some(b=>b.ty==='moof'))return null;
+  const mk=boxes(moov.s,moov.e);
+  let trackId=0,ts=0,avcC=null,W=0,H=0;
+  for(const t of mk.filter(b=>b.ty==='trak')){
+    const tb=boxes(t.s,t.e), mdia=find(tb,'mdia'); if(!mdia)continue;
+    const md=boxes(mdia.s,mdia.e), hdlr=find(md,'hdlr'); if(!hdlr)continue;
+    if(String.fromCharCode(...buf.subarray(hdlr.s+8,hdlr.s+12))!=='vide')continue;
+    const tkhd=find(tb,'tkhd'); trackId=dv.getUint32(tkhd.s+(buf[tkhd.s]===1?20:12));
+    W=dv.getUint32(tkhd.e-8)>>>16; H=dv.getUint32(tkhd.e-4)>>>16;
+    const mdhd=find(md,'mdhd'); ts=dv.getUint32(mdhd.s+(buf[mdhd.s]===1?20:12));
+    const minf=find(md,'minf'), stbl=find(boxes(minf.s,minf.e),'stbl'), stsd=find(boxes(stbl.s,stbl.e),'stsd');
+    const ent=boxes(stsd.s+8,stsd.e)[0]; if(!ent||!/^avc[13]$/.test(ent.ty))return null;
+    const ac=find(boxes(ent.s+78,ent.e),'avcC'); if(!ac)return null;
+    avcC=buf.slice(ac.s,ac.e); break;
+  }
+  if(!avcC||!ts)return null;
+  let defDur=0,defSize=0,defFlags=0; const mvex=find(mk,'mvex');
+  if(mvex)for(const tr of boxes(mvex.s,mvex.e).filter(b=>b.ty==='trex'))if(dv.getUint32(tr.s+4)===trackId){defDur=dv.getUint32(tr.s+12);defSize=dv.getUint32(tr.s+16);defFlags=dv.getUint32(tr.s+20);}
+  const samples=[];
+  for(const mf of top.filter(b=>b.ty==='moof'))for(const tf of boxes(mf.s,mf.e).filter(b=>b.ty==='traf')){
+    const tb=boxes(tf.s,tf.e), tfhd=find(tb,'tfhd'); let p=tfhd.s; const fl=dv.getUint32(p)&0xffffff; p+=4;
+    if(dv.getUint32(p)!==trackId)continue; p+=4;
+    let base=mf.o; if(fl&1){base=Number(dv.getBigUint64(p));p+=8;}
+    if(fl&2)p+=4; let dDur=defDur,dSize=defSize,dFl=defFlags;
+    if(fl&8){dDur=dv.getUint32(p);p+=4;} if(fl&0x10){dSize=dv.getUint32(p);p+=4;} if(fl&0x20){dFl=dv.getUint32(p);p+=4;}
+    const tfdt=find(tb,'tfdt'); let dt=samples.length?samples[samples.length-1].dt+samples[samples.length-1].dur:0;
+    if(tfdt)dt=buf[tfdt.s]===1?Number(dv.getBigUint64(tfdt.s+4)):dv.getUint32(tfdt.s+4);
+    let next=null;
+    for(const tr of tb.filter(b=>b.ty==='trun')){
+      let q=tr.s; const ver=buf[q], tfl=dv.getUint32(q)&0xffffff; q+=4; const cnt=dv.getUint32(q); q+=4;
+      let dataOff=null; if(tfl&1){dataOff=dv.getInt32(q);q+=4;} let first=null; if(tfl&4){first=dv.getUint32(q);q+=4;}
+      let pos=dataOff!==null?base+dataOff:(next!==null?next:base);
+      for(let i=0;i<cnt;i++){
+        let d=dDur,s=dSize,f=(i===0&&first!==null)?first:dFl,c=0;
+        if(tfl&0x100){d=dv.getUint32(q);q+=4;} if(tfl&0x200){s=dv.getUint32(q);q+=4;}
+        if(tfl&0x400){f=dv.getUint32(q);q+=4;} if(tfl&0x800){c=ver?dv.getInt32(q):dv.getUint32(q);q+=4;}
+        samples.push({pos,size:s,dt,dur:d,cto:c,key:!(f&0x10000)});
+        pos+=s; dt+=d;
+      }
+      next=pos;
+    }
+  }
+  if(!samples.length||samples.some(s=>s.pos+s.size>buf.length))return null;
+  // 길이 0인 프레임 보정 후 시간 다시 계산 (재생 길이 오류 방지)
+  const minD=Math.max(1,Math.round(ts/1000)), typ=samples.map(s=>s.dur).filter(d=>d>0).sort((x,y)=>x-y), med=typ.length?typ[typ.length>>1]:Math.round(ts/30);
+  if(!samples[samples.length-1].dur)samples[samples.length-1].dur=med;
+  let acc=samples[0].dt; for(const s of samples){s.dt=acc; if(s.dur<minD)s.dur=minD; acc+=s.dur;}
+  const codec='avc1.'+[1,2,3].map(i=>avcC[i].toString(16).padStart(2,'0')).join('');
+  const muxer=new Mp4Muxer.Muxer({target:new Mp4Muxer.ArrayBufferTarget(),video:{codec:'avc',width:W,height:H},fastStart:'in-memory',firstTimestampBehavior:'offset'});
+  const t0s=samples[0].dt, us=v=>Math.round(v/ts*1e6);
+  samples.forEach((s,i)=>muxer.addVideoChunkRaw(buf.subarray(s.pos,s.pos+s.size),s.key?'key':'delta',us(s.dt+s.cto-t0s),us(s.dur),
+    i===0?{decoderConfig:{codec,codedWidth:W,codedHeight:H,description:avcC}}:undefined,us(s.cto)));
+  muxer.finalize();
+  return new Blob([muxer.target.buffer],{type:'video/mp4'});
 }
 const canWC=()=>!!(window.VideoEncoder&&window.VideoFrame&&window.Mp4Muxer&&HTMLVideoElement.prototype.requestVideoFrameCallback);
 
@@ -616,7 +683,7 @@ async function deliver(blob,ext,info){
   let canShare=false;
   try{canShare=!!(navigator.canShare&&navigator.canShare({files:[new File([blob],filename,{type:lastFile.type})]}));}catch(e){}
   $('#share').hidden=!canShare;
-  status(`영상을 만들었습니다 (${(blob.size/1048576).toFixed(1)}MB). 아래 버튼으로 저장하세요.`,true);
+  status(`영상을 만들었습니다 (${(blob.size/1048576).toFixed(1)}MB · ${S.engine||""}). 아래 버튼으로 저장하세요.`,true);
   $('#result').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 $('#dl').onclick=async()=>{
