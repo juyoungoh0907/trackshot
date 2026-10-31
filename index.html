@@ -80,7 +80,6 @@ select,input[type=number]{font:inherit;font-size:16px;color:var(--ink);backgroun
 .pt-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .pt-actions button{font-size:14px;min-height:42px}
 .pt-actions .lift{grid-column:1/-1;border-style:dashed}
-.pt-actions .track{grid-column:1/-1;background:var(--green-soft);border-color:var(--green);color:var(--ink);font-weight:600}
 .chip.lift{border-style:dashed}
 .chip.lift b{color:var(--green)}
 
@@ -112,6 +111,17 @@ details summary::after{content:"+";color:var(--muted);font-size:20px}
 details[open] summary::after{content:"−"}
 .fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .note{font-size:13px;color:var(--muted);margin:0}
+input[type=text]{font:inherit;font-size:16px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;width:100%;min-height:46px}
+.swatches{display:flex;gap:10px;flex-wrap:wrap}
+.swatches button{width:40px;height:40px;min-height:40px;border-radius:50%;padding:0;border:2px solid var(--line)}
+.swatches button[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 2px var(--surface) inset}
+.check{display:flex;gap:10px;align-items:center;font-size:14px;cursor:pointer;min-height:32px}
+.check input{width:18px;height:18px;accent-color:var(--green)}
+.zone-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.zone-head b{font-size:15px}
+.pt-actions button.on{background:var(--green);border-color:var(--green);color:#fff;font-weight:600}
+.judge{margin-left:auto;align-self:center;font-size:13px;font-weight:700;letter-spacing:.08em;padding:5px 10px;border-radius:999px;color:#fff}
+.judge.s{background:#e5484d}.judge.b{background:#2f7fd8}
 footer{font-size:12px;color:var(--muted);text-align:center;padding-top:6px}
 </style>
 </head>
@@ -150,21 +160,27 @@ footer{font-size:12px;color:var(--muted);text-align:center;padding-top:6px}
         <p class="hint" id="now"></p>
         <div class="chips" id="chips"></div>
         <div class="pt-actions">
-          <button id="autoTrack" class="track" disabled>자동 추적 (릴리스 점부터)</button>
-          <button id="cancelTrack" class="track" hidden>추적 취소</button>
           <button id="setLift" class="lift" disabled>이 프레임을 투구 시작(다리 들기)으로 지정</button>
           <button id="delHere" disabled>이 프레임 점 지우기</button>
           <button id="clear" disabled>점 모두 지우기</button>
         </div>
-        <p class="status" id="trackStatus" hidden></p>
-        <p class="note">자동 추적: 공이 손을 떠난 장면에서 공을 한 번 누른 뒤 '자동 추적'을 누르면 다음 장면들의 공을 찾아 점을 채웁니다. 화면을 누른 채로 움직이면 확대경을 보며 점 위치를 맞출 수 있습니다. 같은 프레임을 다시 누르면 점이 옮겨집니다. 다리를 들기 시작하는 프레임을 투구 시작으로 지정하면 릴리스까지 걸린 투구 시간이 계산되고 영상에도 표시됩니다(선택).</p>
+        <p class="note">화면을 누른 채로 움직이면 확대경을 보며 점 위치를 맞출 수 있습니다. 같은 프레임을 다시 누르면 점이 옮겨집니다. 다리를 들기 시작하는 프레임을 투구 시작으로 지정하면 릴리스까지 걸린 투구 시간이 계산되고 영상에도 표시됩니다(선택).</p>
+      </div>
+
+      <div class="card">
+        <div class="zone-head"><b>스트라이크존</b><label class="check"><input type="checkbox" id="zoneOn"> 존 사용</label></div>
+        <div class="pt-actions">
+          <button id="zoneEdit" disabled>존 위치 맞추기</button>
+          <button id="zoneReset" disabled>존 처음 위치로</button>
+        </div>
+        <p class="note" id="zoneNote">'존 위치 맞추기'를 누르고 네 모서리를 끌어 타깃(존 표시)에 맞추세요. 안쪽을 끌면 통째로 움직입니다. 카메라를 같은 자리에 두면 다음 영상에도 그대로 쓸 수 있습니다.</p>
       </div>
     </div>
 
     <div class="col">
       <div class="card" aria-live="polite">
         <div class="label">구속<span class="tag" id="tag" hidden>예시</span></div>
-        <div class="speed"><span class="v" id="kmh">61.2</span><span class="u">km/h</span></div>
+        <div class="speed"><span class="v" id="kmh">61.2</span><span class="u" id="unitLbl">km/h</span><span class="judge" id="judge" hidden></span></div>
         <div class="meta">
           <div><span class="label">비행시간</span><b id="flight">0.529s</b></div>
           <div><span class="label">투구 시간</span><b id="deliv">1.24s</b></div>
@@ -191,6 +207,20 @@ footer{font-size:12px;color:var(--muted);text-align:center;padding-top:6px}
         </div>
       </div>
 
+      <details class="card" id="styleBox">
+        <summary>영상 꾸미기</summary>
+        <div class="fields">
+          <label class="f">선수 이름 (선택)<input type="text" id="pname" maxlength="20" placeholder="예: 오○○ #18"></label>
+          <label class="f">구속 단위<select id="unit"><option value="kmh">km/h</option><option value="mph">mph</option></select></label>
+        </div>
+        <div class="label">궤적 색</div>
+        <div class="swatches" id="swatches"></div>
+        <label class="check"><input type="checkbox" id="showSpin" checked> 회전 애니메이션 표시</label>
+        <label class="check"><input type="checkbox" id="showRel" checked> 투구 시간(RELEASE) 표시</label>
+        <label class="check"><input type="checkbox" id="showDate" checked> 이름 옆에 날짜 표시</label>
+        <label class="f">궤적 선<select id="trail"><option value="keep">끝까지 남기기</option><option value="fade">공을 따라가며 사라지기</option></select></label>
+      </details>
+
       <details class="card" id="setBox">
         <summary>측정 설정</summary>
         <div class="fields">
@@ -205,7 +235,7 @@ footer{font-size:12px;color:var(--muted);text-align:center;padding-top:6px}
       </details>
     </div>
   </div>
-  <footer>TrackShot · v1.8 (2026-10-31)</footer>
+  <footer>TrackShot · v2.0 (2026-10-31)</footer>
 </div>
 <!-- mp4-muxer 5.1.3 (MIT, Vanilagy) 내장 -->
 <script>
@@ -2087,14 +2117,20 @@ const video=$('#video'), cv=$('#cv'), ctx=cv.getContext('2d'), stage=$('#stage')
 const TYPES=['패스트볼','투심','싱커','커터','슬라이더','스위퍼','커브','체인지업','스플리터','포크볼','너클볼','기타'];
 const EN={'패스트볼':'Fastball','투심':'Two-Seam','싱커':'Sinker','커터':'Cutter','슬라이더':'Slider','스위퍼':'Sweeper','커브':'Curveball','체인지업':'Changeup','스플리터':'Splitter','포크볼':'Forkball','너클볼':'Knuckleball','기타':''};
 const GREEN='#3ccf7a';
+const TRAIL=[['초록','#3ccf7a'],['흰색','#ffffff'],['노랑','#ffd23f'],['빨강','#ff4d5e'],['파랑','#4da3ff']];
+const TC=()=>S.color||GREEN;
+const MPH=0.621371;
+const spd=v=>S.unit==='mph'?v*MPH:v, unitTxt=()=>S.unit==='mph'?'mph':'km/h';
 const KEY='trackshot-v1';
 const S={liftT:null,points:[],fps:240,slow:1,dist:10,ext:1.0,hand:'R',exMode:'rt',hasVideo:false,ar:16/9,exporting:false};
-try{const raw=localStorage.getItem(KEY)||localStorage.getItem('pitch-tracer-v1'); if(raw){const d=JSON.parse(raw); Object.assign(S,{fps:d.fps||240,slow:d.slow||1,dist:d.dist||10,ext:(d.ext??1.0),hand:d.hand||'R',exMode:d.exMode||'rt'});}}catch(e){}
-function persist(){try{localStorage.setItem(KEY,JSON.stringify({fps:S.fps,slow:S.slow,dist:S.dist,ext:S.ext,hand:S.hand,exMode:S.exMode}))}catch(e){}}
+try{const raw=localStorage.getItem(KEY)||localStorage.getItem('pitch-tracer-v1'); if(raw){const d=JSON.parse(raw); Object.assign(S,{fps:d.fps||240,slow:d.slow||1,dist:d.dist||10,ext:(d.ext??1.0),hand:d.hand||'R',exMode:d.exMode||'rt',unit:d.unit||'kmh',color:d.color||GREEN,pname:d.pname||'',showSpin:d.showSpin!==false,showRel:d.showRel!==false,showDate:d.showDate!==false,trail:d.trail||'keep',zone:d.zone||null,zoneOn:!!d.zoneOn});}}catch(e){}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify({fps:S.fps,slow:S.slow,dist:S.dist,ext:S.ext,hand:S.hand,exMode:S.exMode,unit:S.unit,color:S.color,pname:S.pname,showSpin:S.showSpin,showRel:S.showRel,showDate:S.showDate,trail:S.trail,zone:S.zone,zoneOn:S.zoneOn}))}catch(e){}}
 
 $('#types').innerHTML=TYPES.map((n,i)=>`<label><input type="radio" name="ptype" id="pt${i}" value="${n}" ${i===0?'checked':''}><span>${n}</span></label>`).join('');
 const curType=()=>document.querySelector('input[name=ptype]:checked').value;
 $('#fps').value=String(S.fps); $('#slow').value=String(S.slow); $('#dist').value=S.dist; $('#ext').value=S.ext; $('#hand').value=S.hand; $('#exMode').value=S.exMode;
+$('#unit').value=S.unit||'kmh'; $('#pname').value=S.pname||''; $('#showSpin').checked=S.showSpin!==false; $('#showRel').checked=S.showRel!==false; $('#showDate').checked=S.showDate!==false; $('#trail').value=S.trail||'keep'; $('#zoneOn').checked=!!S.zoneOn;
+$('#swatches').innerHTML=TRAIL.map(([n,c])=>`<button type="button" data-c="${c}" aria-label="궤적 ${n}" aria-pressed="${c===TC()}" style="background:${c}"></button>`).join('');
 
 const step=()=>S.slow/S.fps;
 const eff=()=>Math.max(0.3,S.dist-S.ext);
@@ -2128,22 +2164,29 @@ function speedInfo(){
 /* ---------- 궤적·라벨 ---------- */
 function drawLine(c,curve,uEnd,W,H,o={}){
   const sc=Math.min(W,H)/500*1.6, n=Math.max(2,Math.ceil(80*uEnd));
+  if(o.fade!=null){ // 꼬리만 남기고 사라지는 선
+    const L=0.35, a0=Math.max(0,uEnd-L), m=Math.max(2,Math.ceil(60*(uEnd-a0)/L));
+    c.save(); c.lineCap='round'; c.strokeStyle=TC(); c.lineWidth=3.5*sc;
+    let p=curve(a0);
+    for(let i=1;i<=m;i++){const u=a0+(uEnd-a0)*i/m, q=curve(u); c.globalAlpha=o.fade*Math.max(0,Math.min(1,(u-(uEnd-L))/L)); c.beginPath(); c.moveTo(p.x*W,p.y*H); c.lineTo(q.x*W,q.y*H); c.stroke(); p=q;}
+    c.restore(); return;
+  }
   c.save(); c.lineCap='round'; c.lineJoin='round';
-  c.strokeStyle=GREEN; c.globalAlpha=o.faint?.35:1; c.lineWidth=(o.faint?2:3.5)*sc;
+  c.strokeStyle=TC(); c.globalAlpha=o.faint?.35:1; c.lineWidth=(o.faint?2:3.5)*sc;
   c.beginPath(); let p=curve(0); c.moveTo(p.x*W,p.y*H);
   for(let i=1;i<=n;i++){p=curve(uEnd*i/n);c.lineTo(p.x*W,p.y*H);}
   c.stroke();
-  if(!o.faint){c.fillStyle=GREEN;c.beginPath();c.arc(p.x*W,p.y*H,4.5*sc,0,Math.PI*2);c.fill();}
+  if(!o.faint){c.fillStyle=TC();c.beginPath();c.arc(p.x*W,p.y*H,4.5*sc,0,Math.PI*2);c.fill();}
   c.restore();
 }
 function rrect(c,x,y,w,h,r){c.beginPath();if(c.roundRect)c.roundRect(x,y,w,h,r);else c.rect(x,y,w,h);}
 function drawLabel(c,x,y,v,type,W,H,alpha=1){
   const sc=Math.min(W,H)/500*1.6, F='"IBM Plex Sans KR",system-ui,sans-serif';
-  const en=(EN[type]||'').toUpperCase(), num=v.toFixed(1);
+  const en=(EN[type]||'').toUpperCase(), num=spd(v).toFixed(1), ut=unitTxt();
   c.save(); c.globalAlpha=alpha; c.textBaseline='alphabetic';
   const sp=n=>{try{c.letterSpacing=n+'px';}catch(e){}};
   c.font=`600 ${30*sc}px ${F}`; sp(-.5*sc); const nw=c.measureText(num).width;
-  c.font=`500 ${11*sc}px ${F}`; sp(.6*sc); const uw=c.measureText('km/h').width;
+  c.font=`500 ${11*sc}px ${F}`; sp(.6*sc); const uw=c.measureText(ut).width;
   c.font=`600 ${9.5*sc}px ${F}`; sp(1.8*sc); const ew=en?c.measureText(en).width:0;
   const px=13*sc, gap=5*sc, top=en?20*sc:10*sc;
   const bw=Math.max(nw+gap+uw,ew)+px*2, bh=top+32*sc;
@@ -2158,9 +2201,9 @@ function drawLabel(c,x,y,v,type,W,H,alpha=1){
   // 카드
   c.fillStyle='rgba(12,14,13,.68)'; rrect(c,bx,by,bw,bh,9*sc); c.fill();
   c.strokeStyle='rgba(255,255,255,.12)'; c.lineWidth=1; rrect(c,bx+.5,by+.5,bw-1,bh-1,9*sc); c.stroke();
-  if(en){c.font=`600 ${9.5*sc}px ${F}`; sp(1.8*sc); c.fillStyle=GREEN; c.fillText(en,bx+px,by+17*sc);}
+  if(en){c.font=`600 ${9.5*sc}px ${F}`; sp(1.8*sc); c.fillStyle=TC(); c.fillText(en,bx+px,by+17*sc);}
   c.font=`600 ${30*sc}px ${F}`; sp(-.5*sc); c.fillStyle='#fff'; c.fillText(num,bx+px,by+bh-11*sc);
-  c.font=`500 ${11*sc}px ${F}`; sp(.6*sc); c.fillStyle='rgba(255,255,255,.62)'; c.fillText('km/h',bx+px+nw+gap,by+bh-12*sc);
+  c.font=`500 ${11*sc}px ${F}`; sp(.6*sc); c.fillStyle='rgba(255,255,255,.62)'; c.fillText(ut,bx+px+nw+gap,by+bh-12*sc);
   c.restore();
 }
 
@@ -2236,7 +2279,7 @@ function drawSpin(c,W,H,type,hand,time){
   if(!sp.knuckle){
   const ml=Math.hypot(fx,fy), dx=fx/ml, dy=-fy/ml;
   const x1=cx+dx*R*1.12, y1=cy+dy*R*1.12, x2=cx+dx*R*1.62, y2=cy+dy*R*1.62, hs=R*.2;
-  c.strokeStyle=GREEN; c.fillStyle=GREEN; c.lineWidth=R*.07;
+  c.strokeStyle=TC(); c.fillStyle=TC(); c.lineWidth=R*.07;
   c.beginPath(); c.moveTo(x1,y1); c.lineTo(x2-dx*hs*.6,y2-dy*hs*.6); c.stroke();
   c.beginPath(); c.moveTo(x2,y2); c.lineTo(x2-dx*hs-dy*hs*.7,y2-dy*hs+dx*hs*.7); c.lineTo(x2-dx*hs+dy*hs*.7,y2-dy*hs-dx*hs*.7); c.closePath(); c.fill();
   }
@@ -2248,17 +2291,75 @@ function drawSpin(c,W,H,type,hand,time){
 }
 
 /* ---------- 장면 그리기 (미리보기·저장 영상 공용) ---------- */
+/* ---------- 스트라이크존·도착 표시 ---------- */
+const ZDEF=[{x:.41,y:.42},{x:.59,y:.42},{x:.59,y:.64},{x:.41,y:.64}]; // 왼위, 오위, 오아래, 왼아래
+const lerp=(a,b,u)=>({x:a.x+(b.x-a.x)*u,y:a.y+(b.y-a.y)*u});
+function zonePt(u,v){const z=S.zone; return lerp(lerp(z[0],z[1],u),lerp(z[3],z[2],u),v);}
+function drawZone(c,W,H){
+  const z=S.zone, sc=Math.min(W,H)/500*1.6;
+  c.save(); c.lineJoin='round';
+  c.strokeStyle='rgba(255,255,255,.35)'; c.lineWidth=1*sc;
+  for(const f of [1/3,2/3]){let a=zonePt(f,0),b=zonePt(f,1); c.beginPath(); c.moveTo(a.x*W,a.y*H); c.lineTo(b.x*W,b.y*H); c.stroke(); a=zonePt(0,f); b=zonePt(1,f); c.beginPath(); c.moveTo(a.x*W,a.y*H); c.lineTo(b.x*W,b.y*H); c.stroke();}
+  c.strokeStyle='rgba(255,255,255,.9)'; c.lineWidth=2*sc; c.shadowColor='rgba(0,0,0,.5)'; c.shadowBlur=3*sc;
+  c.beginPath(); z.forEach((p,i)=>i?c.lineTo(p.x*W,p.y*H):c.moveTo(p.x*W,p.y*H)); c.closePath(); c.stroke();
+  if(S.zoneEdit&&!S.exporting){c.shadowBlur=0; z.forEach(p=>{c.beginPath(); c.arc(p.x*W,p.y*H,9*sc,0,Math.PI*2); c.fillStyle='rgba(255,255,255,.25)'; c.fill(); c.lineWidth=2*sc; c.strokeStyle=GREEN; c.stroke();});}
+  c.restore();
+}
+const RING=9*1.6/500; // 도착 원 반지름(화면 짧은 변 대비)
+function drawRing(c,x,y,W,H){
+  const r=RING*Math.min(W,H), sc=Math.min(W,H)/500*1.6;
+  c.save(); c.shadowColor='rgba(0,0,0,.55)'; c.shadowBlur=3*sc; c.strokeStyle='#fff'; c.lineWidth=2.6*sc;
+  c.beginPath(); c.arc(x*W,y*H,r,0,Math.PI*2); c.stroke(); c.restore();
+}
+// 판정: 도착 원이 존에 조금이라도 걸치면 스트라이크
+function judge(){
+  if(!S.zoneOn||!S.zone||S.points.length<2)return null;
+  const e=fitCurve(S.points)(1), ar=S.ar||1, mm=Math.min(ar,1), r=RING*mm;
+  const P=S.zone.map(p=>({x:p.x*ar,y:p.y})), q={x:e.x*ar,y:e.y};
+  let inside=false; for(let i=0,j=P.length-1;i<P.length;j=i++){const a=P[i],b=P[j]; if(((a.y>q.y)!==(b.y>q.y))&&(q.x<(b.x-a.x)*(q.y-a.y)/(b.y-a.y)+a.x))inside=!inside;}
+  if(inside)return 'S';
+  let dmin=1e9; for(let i=0;i<P.length;i++){const a=P[i],b=P[(i+1)%P.length],dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy,u=Math.max(0,Math.min(1,((q.x-a.x)*dx+(q.y-a.y)*dy)/(l||1)));dmin=Math.min(dmin,Math.hypot(a.x+dx*u-q.x,a.y+dy*u-q.y));}
+  return dmin<=r?'S':'B';
+}
+function drawJudge(c,x,y,W,H,alpha){
+  const j=judge(); if(!j)return;
+  const sc=Math.min(W,H)/500*1.6, r=RING*Math.min(W,H), txt=j==='S'?'STRIKE':'BALL', F='"IBM Plex Sans KR",system-ui,sans-serif';
+  c.save(); c.globalAlpha=alpha; c.font=`700 ${10*sc}px ${F}`; try{c.letterSpacing=(1.4*sc)+'px';}catch(e){}
+  const tw=c.measureText(txt).width, bw=tw+14*sc, bh=19*sc; let bx=x*W-bw/2, by=y*H+r+6*sc;
+  if(by+bh>H-8)by=y*H-r-6*sc-bh; bx=Math.min(Math.max(8,bx),W-bw-8);
+  c.fillStyle=j==='S'?'#e5484d':'#2f7fd8'; rrect(c,bx,by,bw,bh,bh/2); c.fill();
+  c.fillStyle='#fff'; c.textBaseline='middle'; c.fillText(txt,bx+7*sc,by+bh/2+.5*sc);
+  c.restore();
+}
 function drawOverlays(c,W,H,t,paused,clock){
   const P=S.points;
   if(P.length>=2){
     const curve=fitCurve(P), t0=P[0].t, tN=P[P.length-1].t, uNow=(t-t0)/(tN-t0||1);
-    if(uNow>0) drawLine(c,curve,Math.min(1,uNow),W,H);
+    if(S.zoneOn&&S.zone)drawZone(c,W,H);
+    const fadeMode=S.trail==='fade';
+    if(uNow>0){
+      if(!fadeMode) drawLine(c,curve,Math.min(1,uNow),W,H);
+      else{const after=Math.max(0,(t-tN)/(0.35*S.slow)); if(after<1) drawLine(c,curve,Math.min(1,uNow),W,H,{fade:1-after});}
+    }
     else if(paused&&!S.exporting) drawLine(c,curve,1,W,H,{faint:true});
-    if(uNow>=1){const info=speedInfo(); if(info){const e=curve(1), a=Math.min(1,(t-tN)/(0.04*S.slow)+.15); drawLabel(c,e.x,e.y,info.v,curType(),W,H,a);}}
+    if(uNow>=1){const info=speedInfo(); if(info){const e=curve(1), a=Math.min(1,(t-tN)/(0.04*S.slow)+.15); drawRing(c,e.x,e.y,W,H); drawJudge(c,e.x,e.y,W,H,a); drawLabel(c,e.x,e.y,info.v,curType(),W,H,a);}}
   }
+  else if(S.zoneOn&&S.zone)drawZone(c,W,H);
   drawWatermark(c,W,H);
-  drawSpin(c,W,H,curType(),S.hand,clock);
-  drawDelivery(c,W,H,t);
+  if(S.showSpin!==false)drawSpin(c,W,H,curType(),S.hand,clock);
+  if(S.showRel!==false)drawDelivery(c,W,H,t);
+  drawName(c,W,H);
+}
+/* 선수 이름(+날짜): 왼쪽 위 */
+function nameH(W,H){const s=Math.min(W,H);return s*0.075;}
+function drawName(c,W,H){
+  const nm=(S.pname||'').trim(); if(!nm)return;
+  const s=Math.min(W,H), m=s*0.035, fs=Math.max(11,s*0.034), F='"IBM Plex Sans KR",system-ui,sans-serif';
+  const d=new Date(), ds=`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+  c.save(); c.textBaseline='top'; c.shadowColor='rgba(0,0,0,.6)'; c.shadowBlur=fs*.35;
+  c.font=`700 ${fs}px ${F}`; c.fillStyle='#fff'; c.fillText(nm,m,m);
+  if(S.showDate!==false){const w=c.measureText(nm).width; c.font=`400 ${fs*.72}px ${F}`; c.fillStyle='rgba(255,255,255,.75)'; c.fillText(ds,m+w+fs*.5,m+fs*.22);}
+  c.restore();
 }
 /* 투구 시간: 다리 들기 시작 → 릴리스. 재생 중엔 흐르고 릴리스에서 멈춤 */
 function deliveryTime(){const P=S.points; if(S.liftT==null||!P.length||S.liftT>=P[0].t)return null; return (P[0].t-S.liftT)/S.slow;}
@@ -2275,7 +2376,7 @@ function drawDelivery(c,W,H,t){
   const px=11*sc, bw=Math.max(nw+3*sc+uw,lw)+px*2, bh=44*sc, bx=W-m-bw, by=m;
   c.fillStyle='rgba(12,14,13,.68)'; rrect(c,bx,by,bw,bh,8*sc); c.fill();
   c.strokeStyle='rgba(255,255,255,.12)'; c.lineWidth=1; rrect(c,bx+.5,by+.5,bw-1,bh-1,8*sc); c.stroke();
-  c.font=`600 ${8.5*sc}px ${F}`; sp(1.6*sc); c.fillStyle=GREEN; c.fillText('RELEASE',bx+px,by+15*sc);
+  c.font=`600 ${8.5*sc}px ${F}`; sp(1.6*sc); c.fillStyle=TC(); c.fillText('RELEASE',bx+px,by+15*sc);
   c.font=`600 ${22*sc}px ${F}`; sp(-.4*sc); c.fillStyle=done?'#fff':'rgba(255,255,255,.85)'; c.fillText(num,bx+px,by+bh-9*sc);
   c.font=`500 ${10*sc}px ${F}`; sp(.4*sc); c.fillStyle='rgba(255,255,255,.62)'; c.fillText('s',bx+px+nw+3*sc,by+bh-10*sc);
   c.restore();
@@ -2312,8 +2413,9 @@ function drawSlowTag(c,W,H){
   const s=Math.min(W,H), m=s*0.035, fs=Math.max(10,s*0.026);
   c.save(); c.font=`600 ${fs}px "IBM Plex Sans KR",system-ui,sans-serif`; try{c.letterSpacing=(fs*.18)+'px';}catch(e){}
   c.textBaseline='top'; c.shadowColor='rgba(0,0,0,.55)'; c.shadowBlur=fs*.4;
-  c.fillStyle=GREEN; c.beginPath(); c.arc(m+fs*.35,m+fs*.55,fs*.28,0,Math.PI*2); c.fill();
-  c.fillStyle='#fff'; c.fillText('SLOW MOTION',m+fs*1.1,m);
+  const oy=S.pname?nameH(W,H):0;
+  c.fillStyle=TC(); c.beginPath(); c.arc(m+fs*.35,m+oy+fs*.55,fs*.28,0,Math.PI*2); c.fill();
+  c.fillStyle='#fff'; c.fillText('SLOW MOTION',m+fs*1.1,m+oy);
   c.restore();
 }
 function status(msg,ok){const s=$('#exStatus');s.hidden=!msg;s.textContent=msg||'';s.classList.toggle('ok',!!ok);}
@@ -2551,118 +2653,6 @@ async function remuxFragmented(blob){
   return new Blob([muxer.target.buffer],{type:'video/mp4'});
 }
 
-/* ---------- 자동 추적: 릴리스 점 하나에서 시작해 다음 장면들의 공을 찾아감 ---------- */
-function seekFrameAt(t){return new Promise(res=>{
-  let seeked=false, shown=!video.requestVideoFrameCallback, fin=false;
-  const end=()=>{if(!fin&&seeked&&shown){fin=true;res();}};
-  if(video.requestVideoFrameCallback)video.requestVideoFrameCallback(()=>{shown=true;end();});
-  const h=()=>{video.removeEventListener('seeked',h);seeked=true;setTimeout(()=>{shown=true;end();},250);end();};
-  video.addEventListener('seeked',h); video.currentTime=Math.min(video.duration||t,Math.max(0,t));
-});}
-function rgb2hs(r,g,b){ // hue 0-360, sat 0-1, val 0-1
-  const mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn; let h=0;
-  if(d){if(mx===r)h=((g-b)/d)%6; else if(mx===g)h=(b-r)/d+2; else h=(r-g)/d+4; h*=60; if(h<0)h+=360;}
-  return [h, mx?d/mx:0, mx/255];
-}
-async function autoTrack(){
-  if(S.exporting||S.tracking||!S.hasVideo)return;
-  if(!S.points.length){tstat('먼저 공이 손을 떠나는 장면에서 공을 한 번 눌러 주세요.');return;}
-  const p0=S.points[0];
-  S.tracking=true; S.trackCancel=false; setBusy(true); $('#autoTrack').hidden=true; $('#cancelTrack').hidden=false;
-  video.pause();
-  try{
-    const vw=video.videoWidth, vh=video.videoHeight, k=Math.min(1,1280/Math.max(vw,vh)), W=Math.round(vw*k), H=Math.round(vh*k);
-    const cvs=document.createElement('canvas'); cvs.width=W; cvs.height=H;
-    const g=cvs.getContext('2d',{willReadFrequently:true});
-    const grab=async t=>{await seekFrameAt(t); g.drawImage(video,0,0,W,H); return g.getImageData(0,0,W,H).data;};
-    const dt=step(), dur=video.duration||0, maxN=Math.round(1.5*S.fps), sc=k;
-    const f0=await grab(p0.t);
-    const gray=(d,i)=>0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
-    // 기준값: 누른 곳 주변 15x15에서 가장 색이 진한 픽셀들, 배경은 바깥 테두리
-    const cx0=Math.round(p0.x*W), cy0=Math.round(p0.y*H), r=Math.max(5,Math.round(7*sc)), rr=Math.round(16*sc);
-    const px=[], ring=[];
-    for(let y=cy0-r;y<=cy0+r;y++)for(let x=cx0-r;x<=cx0+r;x++){if(x<0||y<0||x>=W||y>=H)continue;const i=(y*W+x)*4;px.push([...rgb2hs(f0[i],f0[i+1],f0[i+2]),gray(f0,i)]);}
-    for(let a=-rr;a<=rr;a++)for(const [x,y] of [[cx0+a,cy0-rr],[cx0+a,cy0+rr],[cx0-rr,cy0+a],[cx0+rr,cy0+a]]){if(x<0||y<0||x>=W||y>=H)continue;const i=(y*W+x)*4;ring.push([...rgb2hs(f0[i],f0[i+1],f0[i+2]),gray(f0,i)]);}
-    const med=a=>{const s=[...a].sort((x,y)=>x-y);return s[s.length>>1]||0;};
-    const bgS=med(ring.map(p=>p[1])), bgG=med(ring.map(p=>p[3]));
-    const bySat=[...px].sort((a,b)=>b[1]-a[1]).slice(0,Math.max(3,Math.round(px.length*0.2)));
-    const S0=med(bySat.map(p=>p[1]));
-    let hx=0,hy=0; for(const p of bySat){hx+=Math.cos(p[0]*Math.PI/180);hy+=Math.sin(p[0]*Math.PI/180);} const H0=(Math.atan2(hy,hx)*180/Math.PI+360)%360;
-    const byG=[...px].sort((a,b)=>Math.abs(b[3]-bgG)-Math.abs(a[3]-bgG)).slice(0,Math.max(3,Math.round(px.length*0.3)));
-    const G0=byG.reduce((s,p)=>s+p[3],0)/byG.length;
-    const useColor=S0>0.27&&S0-bgS>0.14;
-    // 추적: 영상을 천천히 재생하며 장면을 순서대로 받아 처리(장면마다 찾아가기보다 훨씬 빠름)
-    const hist=[{t:p0.t,d:f0}]; let pts=[{t:p0.t,x:cx0,y:cy0}], vx=0, vy=0, lastA=null;
-    const amin=Math.max(2,Math.round(3*sc*sc)), amax=Math.round(2000*sc*sc), afloor=Math.max(10,Math.round(40*sc*sc));
-    const tEnd=Math.min(dur-dt/2,p0.t+maxN*dt);
-    const queue=[]; let ended=false, wake=null;
-    const onFrame=(now,meta)=>{
-      if(ended)return;
-      const t=meta.mediaTime;
-      if(t>p0.t+dt*0.5){g.drawImage(video,0,0,W,H); queue.push({t,d:g.getImageData(0,0,W,H).data});}
-      if(t>=tEnd||video.ended){ended=true;} else video.requestVideoFrameCallback(onFrame);
-      if(queue.length>3)video.pause();
-      if(wake){const w=wake;wake=null;w();}
-    };
-    video.addEventListener('ended',()=>{ended=true;if(wake){const w=wake;wake=null;w();}},{once:true});
-    video.playbackRate=S.slow>=4?0.5:0.125;
-    video.requestVideoFrameCallback(onFrame);
-    video.play().catch(()=>{ended=true;});
-    const next=async()=>{while(!queue.length){if(ended||S.trackCancel)return null; if(video.paused&&!ended)video.play().catch(()=>{}); await new Promise(r=>{wake=r;setTimeout(r,500);});} const fr=queue.shift(); if(queue.length<2&&video.paused&&!ended)video.play().catch(()=>{}); return fr;};
-    let lost=0;
-    while(true){
-      const fr=await next(); if(!fr)break;
-      const t=fr.t, f=fr.d; hist.push(fr); if(hist.length>4)hist.shift();
-      let prev2=null; for(const h of hist){if(Math.abs((t-h.t)/dt-2)<0.6){prev2=h.d;break;}}
-      const lp=pts[pts.length-1], steps=Math.max(1,Math.round((t-lp.t)/dt));
-      if(steps>7)break;
-      const pxp=lp.x+vx*steps, pyp=lp.y+vy*steps;
-      const R=Math.round(Math.max(18*sc,2.2*Math.hypot(vx,vy)*Math.min(steps,3)+14*sc+3*sc*(steps-1)));
-      const x1=Math.max(0,Math.round(pxp-R)), x2=Math.min(W,Math.round(pxp+R)), y1=Math.max(0,Math.round(pyp-R)), y2=Math.min(H,Math.round(pyp+R));
-      const ww=x2-x1, wh=y2-y1;
-      if(ww<3||wh<3)continue;
-      const mask=new Uint8Array(ww*wh);
-      for(let y=0;y<wh;y++)for(let x=0;x<ww;x++){
-        const i=((y+y1)*W+(x+x1))*4;
-        if(useColor){const [h,s2,v]=rgb2hs(f[i],f[i+1],f[i+2]); let dh=Math.abs(h-H0); dh=Math.min(dh,360-dh); mask[y*ww+x]=(dh<24&&s2>0.5*S0&&v>0.16)?1:0;}
-        else{ if(!prev2)continue; const gv=gray(f,i); mask[y*ww+x]=(Math.abs(gv-gray(prev2,i))>18&&Math.abs(gv-G0)<55)?1:0; }
-      }
-      const lab=new Int32Array(ww*wh); let best=null, id=0; const stack=[];
-      for(let s0=0;s0<mask.length;s0++){
-        if(!mask[s0]||lab[s0])continue; id++; let ar=0,sx=0,sy=0; stack.push(s0); lab[s0]=id;
-        while(stack.length){const q=stack.pop(); const qx=q%ww, qy=(q/ww)|0; ar++; sx+=qx; sy+=qy;
-          if(qx>0&&mask[q-1]&&!lab[q-1]){lab[q-1]=id;stack.push(q-1);} if(qx<ww-1&&mask[q+1]&&!lab[q+1]){lab[q+1]=id;stack.push(q+1);}
-          if(qy>0&&mask[q-ww]&&!lab[q-ww]){lab[q-ww]=id;stack.push(q-ww);} if(qy<wh-1&&mask[q+ww]&&!lab[q+ww]){lab[q+ww]=id;stack.push(q+ww);} }
-        if(ar<amin||ar>amax)continue;
-        if(lastA!=null&&ar>Math.max(2.5*lastA,afloor))continue;
-        const cx=sx/ar+x1, cy=sy/ar+y1, dd=Math.hypot(cx-pxp,cy-pyp); if(dd>R)continue;
-        const sp=Math.hypot(vx,vy);
-        if(sp>2.5*sc&&pts.length>=3){const dx=cx-lp.x, dy=cy-lp.y; if((dx*vx+dy*vy)/(Math.hypot(dx,dy)*sp+1e-6)<0.5)continue;}
-        const scv=dd/R+(lastA==null?0:0.3*Math.abs(Math.log((ar+1)/(lastA+1))));
-        if(!best||scv<best.s)best={s:scv,cx,cy,ar};
-      }
-      if(!best){ if(steps>=6)break; continue; }
-      const nvx=(best.cx-lp.x)/steps, nvy=(best.cy-lp.y)/steps;
-      if(pts.length<3){vx=nvx;vy=nvy;}else{vx=0.6*vx+0.4*nvx;vy=0.6*vy+0.4*nvy;}
-      lastA=lastA==null?best.ar:0.6*lastA+0.4*best.ar;
-      pts.push({t,x:best.cx,y:best.cy});
-      if(pts.length%3===0)tstat(`자동 추적 중… ${pts.length}장면 찾음`);
-    }
-    ended=true; video.pause(); video.playbackRate=+$('#rate').value;
-    if(S.trackCancel){tstat('자동 추적을 취소했습니다.');return;}
-    if(pts.length<4){tstat('공을 따라가지 못했습니다. 공이 손에서 떨어진 직후 장면에서 공 한가운데를 정확히 눌렀는지 확인하거나, 직접 점을 찍어 주세요.');return;}
-    // 점 7개 이하로 줄여서 기존 점을 대체
-    const keep=Math.min(7,pts.length), sel=[];
-    for(let i=0;i<keep;i++)sel.push(pts[Math.round(i*(pts.length-1)/(keep-1))]);
-    S.points=sel.map(p=>({t:p.t,x:p.x/W,y:p.y/H}));
-    const last=pts[pts.length-1];
-    video.currentTime=last.t;
-    tstat(`자동 추적 완료: ${pts.length}장면을 따라갔습니다(${useColor?'색':'움직임'} 기준). 마지막 점(도착)이 공이 실제로 타깃에 닿은 장면인지 꼭 확인하고, 아니면 고쳐 주세요.`,true);
-  }catch(e){tstat('자동 추적 중 오류가 났습니다. 직접 점을 찍어 주세요.');}
-  finally{video.pause(); video.playbackRate=+$('#rate').value; S.tracking=false; setBusy(false); $('#autoTrack').hidden=false; $('#cancelTrack').hidden=true; updateResult();}
-}
-
-function tstat(msg,ok){const s=$('#trackStatus');s.hidden=!msg;s.textContent=msg||'';s.classList.toggle('ok',!!ok);}
 const canWC=()=>!!(window.VideoEncoder&&window.VideoFrame&&window.Mp4Muxer&&HTMLVideoElement.prototype.requestVideoFrameCallback);
 
 
@@ -2732,7 +2722,7 @@ $('#share').onclick=async()=>{
 };
 
 function setBusy(b){
-  ['#play','#b10','#b1','#f1','#f10','#export','#delHere','#clear','#scrub','#autoTrack','#setLift'].forEach(s=>{if(b)$(s).disabled=true;});
+  ['#play','#b10','#b1','#f1','#f10','#export','#delHere','#clear','#scrub','#setLift'].forEach(s=>{if(b)$(s).disabled=true;});
   $('#file').disabled=b;
   if(!b){['#play','#b10','#b1','#f1','#f10','#scrub'].forEach(s=>$(s).disabled=!S.hasVideo);updateResult();}
 }
@@ -2759,8 +2749,7 @@ function renderChips(){
     box.innerHTML=liftChip+box.innerHTML;
   }
   $('#delHere').disabled=S.exporting||(hereIdx()<0&&!onLift);
-  $('#setLift').disabled=S.exporting||S.tracking||!S.hasVideo;
-  $('#autoTrack').disabled=S.exporting||S.tracking||!S.hasVideo||!S.points.length;
+  $('#setLift').disabled=S.exporting||!S.hasVideo;
 }
 $('#chips').addEventListener('click',e=>{
   const g=e.target.closest('[data-go]'), d=e.target.closest('[data-del]');
@@ -2774,7 +2763,7 @@ function updateResult(){
   $('#effNote').textContent=`공 비행거리 ${eff().toFixed(1)}m로 계산합니다.`;
   const k=$('#kmh');
   if(!S.hasVideo){
-    $('#tag').hidden=false; k.classList.remove('idle'); k.textContent='61.2';
+    $('#tag').hidden=false; k.classList.remove('idle'); k.textContent=spd(61.2).toFixed(1); $('#unitLbl').textContent=unitTxt();
     $('#flight').textContent='0.529s';$('#frames').textContent='127';$('#err').textContent='±0.5';$('#deliv').textContent='1.24s';
     $('#export').disabled=true; w.hidden=true;
   }else if(!info){
@@ -2782,7 +2771,7 @@ function updateResult(){
     $('#flight').textContent='–';$('#frames').textContent='–';$('#err').textContent='–';$('#deliv').textContent='–';
     $('#export').disabled=true; w.hidden=true;
   }else{
-    $('#tag').hidden=true; k.classList.remove('idle'); k.textContent=info.v.toFixed(1);
+    $('#tag').hidden=true; k.classList.remove('idle'); k.textContent=spd(info.v).toFixed(1); $('#unitLbl').textContent=unitTxt();
     $('#flight').textContent=info.dt.toFixed(3)+'s';$('#frames').textContent=info.frames;$('#err').textContent='±'+info.err.toFixed(1);
     const dl=deliveryTime(); $('#deliv').textContent=dl!=null?dl.toFixed(2)+'s':'–';
     $('#export').disabled=S.exporting;
@@ -2791,6 +2780,9 @@ function updateResult(){
     else if(n===2){w.hidden=false;w.textContent='중간 점을 2~4개 더 찍으면 휘는 궤적이 나옵니다.';}
     else w.hidden=true;
   }
+  const jg=S.hasVideo?judge():null, jb=$('#judge'); jb.hidden=!jg; if(jg){jb.textContent=jg==='S'?'STRIKE':'BALL'; jb.className='judge '+(jg==='S'?'s':'b');}
+  $('#zoneEdit').disabled=$('#zoneReset').disabled=!S.hasVideo||S.exporting;
+  $('#zoneEdit').textContent=S.zoneEdit?'존 맞추기 완료':'존 위치 맞추기'; $('#zoneEdit').classList.toggle('on',!!S.zoneEdit);
   const s=n===0?0:n===1?1:n===2?2:3;
   $('#now').innerHTML=S.hasVideo?`<b>${Math.min(s+1,4)}/4</b>${NOW[s]}`:'<b>시작</b>240fps 슬로모션 영상을 불러오세요.';
   renderChips();
@@ -2814,7 +2806,7 @@ $('#play').addEventListener('click',()=>{
   if(video.paused){if(S.points.length>=2&&video.currentTime>=S.points[S.points.length-1].t-1e-6)video.currentTime=Math.max(0,S.points[0].t-0.25*S.slow);video.playbackRate=+$('#rate').value;video.play();}
   else video.pause();
 });
-function seekBy(n){if(S.exporting||S.tracking||!S.hasVideo)return;video.pause();video.currentTime=Math.min(video.duration||0,Math.max(0,video.currentTime+n*step()));}
+function seekBy(n){if(S.exporting||!S.hasVideo)return;video.pause();video.currentTime=Math.min(video.duration||0,Math.max(0,video.currentTime+n*step()));}
 // 길게 누르면 연속 이동
 function holdRepeat(btn,n){
   let t1=null,t2=null; const stop=()=>{clearTimeout(t1);clearInterval(t2);t1=t2=null;};
@@ -2836,9 +2828,18 @@ document.addEventListener('keydown',e=>{
 /* ---------- 점 찍기: 누르면 찍히고, 누른 채 움직이면 확대경으로 조정 ---------- */
 let dragT=null;
 const posOf=e=>{const r=cv.getBoundingClientRect();return{x:Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)),y:Math.min(1,Math.max(0,(e.clientY-r.top)/r.height))};};
+let zDrag=null;
 cv.addEventListener('pointerdown',e=>{
-  if(S.exporting||S.tracking)return;
+  if(S.exporting)return;
   if(!S.hasVideo){$('#file').click();return;}
+  if(S.zoneEdit&&S.zone){
+    e.preventDefault(); try{cv.setPointerCapture(e.pointerId);}catch(_){}
+    const r=cv.getBoundingClientRect(), q=posOf(e);
+    let bi=-1,bd=1e9; S.zone.forEach((p,i)=>{const d=Math.hypot((p.x-q.x)*r.width,(p.y-q.y)*r.height); if(d<bd){bd=d;bi=i;}});
+    if(bd<34){zDrag={i:bi}; loupe={x:S.zone[bi].x,y:S.zone[bi].y};}
+    else zDrag={move:true,last:q,start:S.zone.map(p=>({...p}))};
+    return;
+  }
   if(!video.paused){video.pause();return;}
   e.preventDefault(); try{cv.setPointerCapture(e.pointerId);}catch(_){}
   const {x,y}=posOf(e), t=video.currentTime, i=hereIdx();
@@ -2847,14 +2848,16 @@ cv.addEventListener('pointerdown',e=>{
   loupe={x,y}; updateResult();
 });
 cv.addEventListener('pointermove',e=>{
+  if(zDrag){e.preventDefault(); const q=posOf(e);
+    if(zDrag.move){const dx=q.x-zDrag.last.x, dy=q.y-zDrag.last.y; zDrag.last=q; S.zone=S.zone.map(p=>({x:Math.min(1,Math.max(0,p.x+dx)),y:Math.min(1,Math.max(0,p.y+dy))}));}
+    else{S.zone[zDrag.i]={x:q.x,y:q.y}; loupe={x:q.x,y:q.y};}
+    return;}
   if(dragT===null)return; e.preventDefault();
   const {x,y}=posOf(e), p=S.points.find(q=>q.t===dragT); if(p){p.x=x;p.y=y;} loupe={x,y};
 });
-const endDrag=()=>{if(dragT===null)return;dragT=null;loupe=null;updateResult();};
+const endDrag=()=>{if(zDrag){zDrag=null;loupe=null;persist();updateResult();return;} if(dragT===null)return;dragT=null;loupe=null;updateResult();};
 cv.addEventListener('pointerup',endDrag); cv.addEventListener('pointercancel',endDrag);
 $('#delHere').onclick=()=>{const i=hereIdx();if(i>=0)S.points.splice(i,1);else if(S.liftT!=null&&Math.abs(S.liftT-video.currentTime)<step()/2)S.liftT=null;updateResult();};
-$('#autoTrack').onclick=()=>{autoTrack();};
-$('#cancelTrack').onclick=()=>{S.trackCancel=true;};
 $('#setLift').onclick=()=>{if(!S.hasVideo||S.exporting)return;video.pause();S.liftT=video.currentTime;updateResult();};
 $('#clear').onclick=()=>{const b=$('#clear');
   if(b.dataset.armed){delete b.dataset.armed;b.textContent='점 모두 지우기';S.points=[];S.liftT=null;updateResult();}
@@ -2869,6 +2872,15 @@ $('#fps').addEventListener('change',()=>{S.fps=+$('#fps').value;persist();update
 $('#slow').addEventListener('change',()=>{S.slow=+$('#slow').value;persist();updateResult();updateReadout();});
 $('#hand').addEventListener('change',()=>{S.hand=$('#hand').value;persist();});
 $('#exMode').addEventListener('change',()=>{S.exMode=$('#exMode').value;persist();});
+$('#unit').addEventListener('change',()=>{S.unit=$('#unit').value;persist();updateResult();});
+$('#pname').addEventListener('input',()=>{S.pname=$('#pname').value;persist();});
+['showSpin','showRel','showDate'].forEach(id=>$('#'+id).addEventListener('change',()=>{S[id]=$('#'+id).checked;persist();}));
+
+$('#trail').addEventListener('change',()=>{S.trail=$('#trail').value;persist();});
+$('#zoneOn').addEventListener('change',()=>{S.zoneOn=$('#zoneOn').checked; if(S.zoneOn&&!S.zone)S.zone=ZDEF.map(p=>({...p})); if(!S.zoneOn)S.zoneEdit=false; persist(); updateResult();});
+$('#zoneEdit').onclick=()=>{ if(!S.hasVideo)return; S.zoneEdit=!S.zoneEdit; if(S.zoneEdit){video.pause(); S.zoneOn=true; $('#zoneOn').checked=true; if(!S.zone)S.zone=ZDEF.map(p=>({...p}));} persist(); updateResult(); };
+$('#zoneReset').onclick=()=>{ S.zone=ZDEF.map(p=>({...p})); S.zoneOn=true; $('#zoneOn').checked=true; persist(); updateResult(); };
+$('#swatches').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)return;S.color=b.dataset.c;persist();document.querySelectorAll('#swatches button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));});
 
 layout(); updateResult(); requestAnimationFrame(render);
 })();
