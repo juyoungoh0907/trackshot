@@ -504,7 +504,7 @@ async function exportVideoWC(){
     }
     if(!codec)throw new Error('codec');
     const oc=document.createElement('canvas'); oc.width=W; oc.height=H; const c2=oc.getContext('2d');
-    const muxer=new Mp4Muxer.Muxer({target:new Mp4Muxer.ArrayBufferTarget(),video:{codec:'avc',width:W,height:H},fastStart:'in-memory'});
+    const muxer=new Mp4Muxer.Muxer({target:new Mp4Muxer.ArrayBufferTarget(),video:{codec:'avc',width:W,height:H,frameRate:30},fastStart:'in-memory'});
     let encErr=null;
     const enc=new VideoEncoder({output:(ch,meta)=>muxer.addVideoChunk(ch,meta),error:e=>{encErr=e;}});
     enc.configure({codec,width:W,height:H,bitrate:8e6,framerate:30});
@@ -513,8 +513,8 @@ async function exportVideoWC(){
     const segs=[];
     const mk=(fps,play,lead,tail,slow,rateOut)=>{const start=Math.max(0,t0-lead*S.slow), end=Math.min(dur,tN+tail*S.slow), step=rateOut/fps;
       return {fps,play,slow,start,end,step,count:Math.max(1,Math.floor((end-start)/step+1e-6)+1)};};
-    // 실제 속도: 60fps 출력, 파일 시간은 배속만큼 건너뜀
-    if(S.exMode!=='slow') segs.push(mk(60,S.slow>=4?2:1,1.2,0.3,false,S.slow));
+    // 실제 속도: 30fps 고정 출력, 파일 시간은 배속만큼 건너뜀
+    if(S.exMode!=='slow') segs.push(mk(30,S.slow>=4?2:1,1.2,0.3,false,S.slow));
     // 슬로모션: 30fps 출력
     if(S.exMode!=='rt'){const r=S.slow>=4?1:0.25; segs.push(mk(30,r,0.25,0.15,true,r));}
     const holdSec=i=>i===segs.length-1?1.5:0.7;
@@ -525,7 +525,7 @@ async function exportVideoWC(){
       c2.drawImage(video,0,0,W,H);
       drawOverlays(c2,W,H,t,false,ts/1e6);
       if(g.slow&&segs.length>1)drawSlowTag(c2,W,H);
-      const d=Math.round(1e6/fps);
+      ts=Math.round(n*1e6/30); const d=Math.round((n+1)*1e6/30)-ts;
       const f=new VideoFrame(oc,{timestamp:ts,duration:d});
       enc.encode(f,{keyFrame:n%60===0}); f.close();
       ts+=d; n++;
