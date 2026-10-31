@@ -137,7 +137,7 @@ footer{font-size:12px;color:var(--muted);text-align:center;padding-top:6px}
 </head>
 <body>
 <div class="wrap">
-  <header><h1>Track<span>Shot</span></h1><p>슬로모션 투구 영상으로 구속 측정</p></header>
+  <header><h1>Track<span>Shot</span></h1></header>
 
   <div class="grid">
     <div class="col">
@@ -167,8 +167,6 @@ footer{font-size:12px;color:var(--muted);text-align:center;padding-top:6px}
       <div class="warn" id="vidErr" hidden></div>
         <div class="card zpad" id="zpad" hidden>
         <div class="zone-head"><b>스트라이크존 맞추기</b><button id="zoneDone" class="primary">완료</button></div>
-        <p class="hint"><b>1</b>영상 위에서 존의 한쪽 모서리부터 반대쪽 모서리까지 손가락으로 쓱 그으세요.</p>
-        <p class="hint"><b>2</b>아래 버튼으로 미세 조정하세요. 길게 누르면 계속 움직입니다.</p>
         <div class="zgrid">
           <span class="zl">위치</span>
           <button data-z="mx,-1" aria-label="존 왼쪽으로">←</button><button data-z="my,-1" aria-label="존 위로">↑</button><button data-z="my,1" aria-label="존 아래로">↓</button><button data-z="mx,1" aria-label="존 오른쪽으로">→</button>
@@ -187,18 +185,15 @@ footer{font-size:12px;color:var(--muted);text-align:center;padding-top:6px}
           <label class="f">타자 키 (cm)<input type="number" inputmode="numeric" id="bh" min="120" max="210" step="1" value="175"></label>
           <button id="zoneRatio">규정 비율로 세로 맞추기</button>
         </div>
-        <p class="note">규정 비율: 가로 47.2cm(홈플레이트+양옆 2cm), 세로는 타자 키의 27.04~55.75% (KBO ABS 기준). 타깃이 카메라를 정면으로 마주 볼 때 정확합니다.</p>
       </div>
 
       <div class="card">
-        <p class="hint" id="now"></p>
         <div class="chips" id="chips"></div>
         <div class="pt-actions">
           <button id="setLift" class="lift" disabled>이 프레임을 투구 시작(다리 들기)으로 지정</button>
           <button id="delHere" disabled>이 프레임 점 지우기</button>
           <button id="clear" disabled>점 모두 지우기</button>
         </div>
-        <p class="note">화면을 누른 채로 움직이면 확대경을 보며 점 위치를 맞출 수 있습니다. 같은 프레임을 다시 누르면 점이 옮겨집니다. 다리를 들기 시작하는 프레임을 투구 시작으로 지정하면 릴리스까지 걸린 투구 시간이 계산되고 영상에도 표시됩니다(선택).</p>
       </div>
 
       <div class="card">
@@ -207,7 +202,6 @@ footer{font-size:12px;color:var(--muted);text-align:center;padding-top:6px}
           <button id="zoneEdit" disabled>존 위치 맞추기</button>
           <button id="zoneReset" disabled>존 처음 위치로</button>
         </div>
-        <p class="note" id="zoneNote">'존 위치 맞추기'를 누른 뒤 영상 위에 손가락으로 존을 그리면 됩니다. 카메라를 같은 자리에 두면 다음 영상에도 그대로 쓸 수 있습니다.</p>
       </div>
     </div>
 
@@ -264,12 +258,10 @@ footer{font-size:12px;color:var(--muted);text-align:center;padding-top:6px}
           <label class="f">영상 파일 형식<select id="slow"><option value="1">원본 고속 파일</option><option value="8">8배 느리게 저장됨</option><option value="4">4배 느리게 저장됨</option></select></label>
           <label class="f">투구 손<select id="hand"><option value="R">우투</option><option value="L">좌투</option></select></label>
         </div>
-        <p class="note" id="effNote"></p>
-        <p class="note">+1을 여러 번 눌러야 화면이 한 번 움직이면 '8배 느리게 저장됨'을 고르세요. 폰은 투수 뒤 대각선 2~3m에 고정하는 것을 권장합니다.</p>
       </details>
     </div>
   </div>
-  <footer>TrackShot · v2.2 (2026-11-01)</footer>
+  <footer>TrackShot · v2.4 (2026-11-01)</footer>
 </div>
 <!-- mp4-muxer 5.1.3 (MIT, Vanilagy) 내장 -->
 <script>
@@ -2210,47 +2202,47 @@ function drawLine(c,curve,uEnd,W,H,o={}){
   c.beginPath(); let p=curve(0); c.moveTo(p.x*W,p.y*H);
   for(let i=1;i<=n;i++){p=curve(uEnd*i/n);c.lineTo(p.x*W,p.y*H);}
   c.stroke();
-  if(!o.faint){c.fillStyle=TC();c.beginPath();c.arc(p.x*W,p.y*H,4.5*sc,0,Math.PI*2);c.fill();}
+  if(!o.faint&&uEnd<1){c.fillStyle=TC();c.beginPath();c.arc(p.x*W,p.y*H,4.5*sc,0,Math.PI*2);c.fill();}
   c.restore();
 }
 function rrect(c,x,y,w,h,r){c.beginPath();if(c.roundRect)c.roundRect(x,y,w,h,r);else c.rect(x,y,w,h);}
 function drawLabel(c,x,y,v,type,W,H,alpha=1){
   const sc=Math.min(W,H)/500*1.6, F='"IBM Plex Sans KR",system-ui,sans-serif';
-  const en=(EN[type]||'').toUpperCase(), num=spd(v).toFixed(1), ut=unitTxt();
+  const en=(EN[type]||'').toUpperCase(), num=spd(v).toFixed(1), ut=unitTxt(), jg=judge(), jt=jg?(jg==='S'?'STRIKE':'BALL'):'', jc=jg==='S'?'#ff6b6b':'#6fb3ff';
   c.save(); c.globalAlpha=alpha; c.textBaseline='alphabetic';
   const sp=n=>{try{c.letterSpacing=n+'px';}catch(e){}};
-  c.font=`600 ${30*sc}px ${F}`; sp(-.5*sc); const nw=c.measureText(num).width;
-  c.font=`500 ${11*sc}px ${F}`; sp(.6*sc); const uw=c.measureText(ut).width;
-  c.font=`600 ${9.5*sc}px ${F}`; sp(1.8*sc); const ew=en?c.measureText(en).width:0;
-  const px=13*sc, gap=5*sc, top=en?20*sc:10*sc;
-  const bw=Math.max(nw+gap+uw,ew)+px*2, bh=top+32*sc;
+  const NF=22*sc, UF=9*sc, EF=8*sc;
+  c.font=`600 ${NF}px ${F}`; sp(-.4*sc); const nw=c.measureText(num).width;
+  c.font=`500 ${UF}px ${F}`; sp(.5*sc); const uw=c.measureText(ut).width;
+  c.font=`600 ${EF}px ${F}`; sp(1.5*sc); const ew1=en?c.measureText(en).width:0, sepw=en&&jt?c.measureText(' · ').width:0;
+  c.font=`700 ${EF}px ${F}`; sp(1.5*sc); const jw=jt?c.measureText(jt).width:0; const ew=ew1+sepw+jw;
+  const hasTop=!!(en||jt), px=10*sc, gap=4*sc, enBase=13*sc, numBase=hasTop?enBase+10*sc+NF*0.72:8*sc+NF*0.72;
+  const bw=Math.max(nw+gap+uw,ew)+px*2, bh=numBase+8*sc;
   const ex=x*W, ey=y*H;
-  let bx=ex+26*sc, by=ey-bh-26*sc;
-  if(bx+bw>W-8) bx=ex-26*sc-bw;
+  let bx=ex+22*sc, by=ey-bh-22*sc;
+  if(bx+bw>W-8) bx=ex-22*sc-bw;
   bx=Math.min(Math.max(8,bx),W-bw-8); by=Math.min(Math.max(8,by),H-bh-8);
   // 연결선
   const ax=bx>ex?bx:bx+bw, ay=by+bh;
   c.strokeStyle='rgba(255,255,255,.55)'; c.lineWidth=1*sc;
   c.beginPath(); c.moveTo(ex,ey); c.lineTo(ax,ay); c.stroke();
   // 카드
-  c.fillStyle='rgba(12,14,13,.68)'; rrect(c,bx,by,bw,bh,9*sc); c.fill();
-  c.strokeStyle='rgba(255,255,255,.12)'; c.lineWidth=1; rrect(c,bx+.5,by+.5,bw-1,bh-1,9*sc); c.stroke();
-  if(en){c.font=`600 ${9.5*sc}px ${F}`; sp(1.8*sc); c.fillStyle=TC(); c.fillText(en,bx+px,by+17*sc);}
-  c.font=`600 ${30*sc}px ${F}`; sp(-.5*sc); c.fillStyle='#fff'; c.fillText(num,bx+px,by+bh-11*sc);
-  c.font=`500 ${11*sc}px ${F}`; sp(.6*sc); c.fillStyle='rgba(255,255,255,.62)'; c.fillText(ut,bx+px+nw+gap,by+bh-12*sc);
+  c.fillStyle='rgba(12,14,13,.68)'; rrect(c,bx,by,bw,bh,7*sc); c.fill();
+  c.strokeStyle='rgba(255,255,255,.12)'; c.lineWidth=1; rrect(c,bx+.5,by+.5,bw-1,bh-1,7*sc); c.stroke();
+  if(en){c.font=`600 ${EF}px ${F}`; sp(1.5*sc); c.fillStyle=TC(); c.fillText(en,bx+px,by+enBase);}
+  if(en&&jt){c.font=`600 ${EF}px ${F}`; sp(1.5*sc); c.fillStyle='rgba(255,255,255,.45)'; c.fillText(' · ',bx+px+ew1,by+enBase);}
+  if(jt){c.font=`700 ${EF}px ${F}`; sp(1.5*sc); c.fillStyle=jc; c.fillText(jt,bx+px+ew1+sepw,by+enBase);}
+  c.font=`600 ${NF}px ${F}`; sp(-.4*sc); c.fillStyle='#fff'; c.fillText(num,bx+px,by+numBase);
+  c.font=`500 ${UF}px ${F}`; sp(.5*sc); c.fillStyle='rgba(255,255,255,.62)'; c.fillText(ut,bx+px+nw+gap,by+numBase);
   c.restore();
 }
 
 /* ---------- 워터마크 ---------- */
 function drawWatermark(c,W,H){
-  const s=Math.min(W,H), m=s*0.035, fs=Math.max(10,s*0.03);
-  c.save(); c.textBaseline='alphabetic'; c.shadowColor='rgba(0,0,0,.55)'; c.shadowBlur=fs*0.4;
-  c.font=`400 ${fs}px "IBM Plex Sans KR",system-ui,sans-serif`;
-  c.fillStyle='rgba(255,255,255,.78)';
-  const a='Tracked by ', aw=c.measureText(a).width;
-  c.fillText(a,m,H-m);
-  c.font=`700 ${fs}px "IBM Plex Sans KR",system-ui,sans-serif`;
-  c.fillStyle='#fff'; c.fillText('TrackShot',m+aw,H-m);
+  const s=Math.min(W,H), m=s*0.035, fs=Math.max(9,s*0.022), fb=Math.max(13,s*0.042), F='"IBM Plex Sans KR",system-ui,sans-serif';
+  c.save(); c.textBaseline='alphabetic'; c.shadowColor='rgba(0,0,0,.55)'; c.shadowBlur=fb*0.3;
+  c.font=`700 ${fb}px ${F}`; try{c.letterSpacing=(-fb*0.01)+'px';}catch(e){} c.fillStyle='#fff'; c.fillText('TrackShot',m,H-m);
+  try{c.letterSpacing=(fs*0.04)+'px';}catch(e){} c.font=`400 ${fs}px ${F}`; c.fillStyle='rgba(255,255,255,.8)'; c.fillText('Tracked by',m+fb*0.04,H-m-fb*1.02);
   c.restore();
 }
 
@@ -2339,10 +2331,10 @@ function drawZone(c,W,H){
   if(S.zoneEdit&&!S.exporting){c.shadowBlur=0; z.forEach(p=>{c.beginPath(); c.arc(p.x*W,p.y*H,9*sc,0,Math.PI*2); c.fillStyle='rgba(255,255,255,.25)'; c.fill(); c.lineWidth=2*sc; c.strokeStyle=GREEN; c.stroke();});}
   c.restore();
 }
-const RING=9*1.6/500; // 도착 원 반지름(화면 짧은 변 대비)
+const RING=5*1.6/500; // 도착 원 반지름(화면 짧은 변 대비)
 function drawRing(c,x,y,W,H){
   const r=RING*Math.min(W,H), sc=Math.min(W,H)/500*1.6;
-  c.save(); c.shadowColor='rgba(0,0,0,.55)'; c.shadowBlur=3*sc; c.strokeStyle='#fff'; c.lineWidth=2.6*sc;
+  c.save(); c.shadowColor='rgba(0,0,0,.45)'; c.shadowBlur=1.5*sc; c.strokeStyle='#fff'; c.lineWidth=1.1*sc;
   c.beginPath(); c.arc(x*W,y*H,r,0,Math.PI*2); c.stroke(); c.restore();
 }
 // 판정: 도착 원이 존에 조금이라도 걸치면 스트라이크
@@ -2376,7 +2368,7 @@ function drawOverlays(c,W,H,t,paused,clock){
       else{const after=Math.max(0,(t-tN)/(0.35*S.slow)); if(after<1) drawLine(c,curve,Math.min(1,uNow),W,H,{fade:1-after});}
     }
     else if(paused&&!S.exporting) drawLine(c,curve,1,W,H,{faint:true});
-    if(uNow>=1){const info=speedInfo(); if(info){const e=curve(1), a=Math.min(1,(t-tN)/(0.04*S.slow)+.15); drawRing(c,e.x,e.y,W,H); drawJudge(c,e.x,e.y,W,H,a); drawLabel(c,e.x,e.y,info.v,curType(),W,H,a);}}
+    if(uNow>=1){const info=speedInfo(); if(info){const e=curve(1), a=Math.min(1,(t-tN)/(0.04*S.slow)+.15); drawRing(c,e.x,e.y,W,H); drawLabel(c,e.x,e.y,info.v,curType(),W,H,a);}}
   }
   else if(S.zoneOn&&S.zone)drawZone(c,W,H);
   drawWatermark(c,W,H);
@@ -2775,7 +2767,7 @@ function renderChips(){
   const box=$('#chips'), n=S.points.length, here=video.currentTime, onLift=S.liftT!=null&&Math.abs(S.liftT-here)<step()/2;
   const liftChip=S.liftT!=null?`<span class="chip lift${onLift?' on':''}"><button data-go="lift" aria-label="투구 시작 프레임으로 이동"><b>투구 시작</b>F${frameNo(S.liftT)}</button><button class="x" data-del="lift" aria-label="투구 시작 지우기">×</button></span>`:'';
   if(S.hasVideo&&n===0&&liftChip){box.innerHTML=liftChip;}
-  else if(!S.hasVideo||n===0){box.innerHTML=`<span class="empty">${S.hasVideo?'아직 찍은 점이 없습니다.':'영상을 불러오면 여기에 점이 표시됩니다.'}</span>`;}
+  else if(!S.hasVideo||n===0){box.innerHTML='';}
   else{
     const h=hereIdx();
     box.innerHTML=S.points.map((p,i)=>{const name=i===0?'릴리스':(i===n-1&&n>1?'도착':`${i+1}`);
@@ -2794,7 +2786,6 @@ const NOW=['공이 손을 떠나는 프레임에서 공을 누르세요.','프�
 function updateResult(){
   const info=speedInfo(), w=$('#speedWarn'), n=S.points.length;
   $('#clear').disabled=n===0||S.exporting;
-  $('#effNote').textContent=`공 비행거리 ${eff().toFixed(1)}m로 계산합니다.`;
   const k=$('#kmh');
   if(!S.hasVideo){
     $('#tag').hidden=false; k.classList.remove('idle'); k.textContent=spd(61.2).toFixed(1); $('#unitLbl').textContent=unitTxt();
@@ -2817,9 +2808,8 @@ function updateResult(){
   const jg=S.hasVideo?judge():null, jb=$('#judge'); jb.hidden=!jg; if(jg){jb.textContent=jg==='S'?'STRIKE':'BALL'; jb.className='judge '+(jg==='S'?'s':'b');}
   $('#zoneEdit').disabled=$('#zoneReset').disabled=!S.hasVideo||S.exporting;
   $('#zoneEdit').textContent=S.zoneEdit?'존 맞추기 완료':'존 위치 맞추기'; $('#zoneEdit').classList.toggle('on',!!S.zoneEdit);
-  $('#zpad').hidden=!S.zoneEdit; $('#zoneNote').hidden=!!S.zoneEdit;
+  $('#zpad').hidden=!S.zoneEdit;
   const s=n===0?0:n===1?1:n===2?2:3;
-  $('#now').innerHTML=S.hasVideo?`<b>${Math.min(s+1,4)}/4</b>${NOW[s]}`:'<b>시작</b>240fps 슬로모션 영상을 불러오세요.';
   renderChips();
 }
 
